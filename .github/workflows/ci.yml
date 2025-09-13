@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: write  # Needed for committing version changes
+  actions: write   # Needed for uploading artifacts
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,8 +26,32 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Increment PATCH version
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          # Read current version from build.gradle
+          CURRENT_VERSION=$(grep '^version = ' build.gradle | sed "s/version = '//;s/'//")
+          # Split into MAJOR.MINOR.PATCH
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          # Increment PATCH
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          # Update build.gradle
+          sed -i "s/version = '$CURRENT_VERSION'/version = '$NEW_VERSION'/" build.gradle
+          # Commit the change
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add build.gradle
+          git commit -m "Bump version to $NEW_VERSION"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and test
         run: ./gradlew build --stacktrace
+
+      - name: List build directory
+        run: ls -R build/libs/  # Debugging: Verify JAR name
 
       - name: Upload test results
         if: always()
