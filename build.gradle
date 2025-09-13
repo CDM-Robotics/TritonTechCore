@@ -1,0 +1,83 @@
+plugins {
+    id "java"
+    id "edu.wpi.first.GradleRIO" version "2025.3.2"
+    id 'maven-publish'
+}
+
+group = 'org.tritontech'
+version = '1.0.0'
+sourceCompatibility = '17'
+targetCompatibility = '17'
+
+repositories {
+  mavenCentral()
+  maven { url 'https://frcmaven.wpi.edu/artifactory/release' }
+  maven { url 'https://frcmaven.wpi.edu/artifactory/development' }
+  maven { url 'https://maven.revrobotics.com/' }  // REV Robotics Maven repo
+  maven { url 'https://dev.studica.com/maven/release/2025/' }  // Studica Maven repo
+  maven { url 'https://3015rangerrobotics.github.io/pathplannerlib/repo' }  // PathplannerLib Maven repo
+}
+
+dependencies {
+  annotationProcessor wpi.java.deps.wpilibAnnotations()
+  implementation wpi.java.deps.wpilib()
+  implementation wpi.java.vendor.java()
+
+  // WPILib Java dependencies
+  implementation 'edu.wpi.first.wpilibj:wpilibj-java:2025.3.2'  // Pinned to 2025.3.2
+  implementation 'edu.wpi.first.wpiutil:wpiutil-java:2025.3.2'
+  implementation 'edu.wpi.first.wpimath:wpimath-java:2025.3.2'
+  implementation 'edu.wpi.first.wpiunits:wpiunits-java:2025.3.2'
+  implementation 'edu.wpi.first.ntcore:ntcore-java:2025.3.2'
+  implementation 'edu.wpi.first.cscore:cscore-java:2025.3.2'
+  implementation 'edu.wpi.first.cameraserver:cameraserver-java:2025.3.2'
+  implementation 'edu.wpi.first.hal:hal-java:2025.3.2'
+  implementation 'edu.wpi.first.thirdparty.frc2025.opencv:opencv-java:4.10.0-2'
+
+  // REV Robotics dependency
+  implementation 'com.revrobotics.frc:REVLib-java:2025.0.3'
+
+  // Studica dependency
+  implementation 'com.studica.frc:Studica-java:2025.0.1'
+
+  // PathplannerLib dependency
+  implementation 'com.pathplanner.lib:PathplannerLib-java:2025.2.7'
+
+  // Optional dependencies
+  implementation 'org.ejml:ejml-simple:0.43.1'
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+
+  // Test dependencies
+  testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+  useJUnitPlatform()
+  testLogging {
+    events 'failed'
+    exceptionFormat 'full'
+  }
+}
+
+javadoc {
+  options {
+    links 'https://docs.oracle.com/en/java/javase/17/docs/api/',
+          'https://github.javadoc.io/allwpilib/docs/release/java/', 
+          'https://codedocs.revrobotics.com/'
+  }
+}
+
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      groupId = 'org.tritontech'
+      artifactId = 'TritonTechCore'
+      version = '1.0.0'
+      from components.java
+    }
+  }
+  repositories {
+    mavenLocal()  // Local publishing for testing
+  }
+}
