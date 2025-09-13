@@ -95,6 +95,7 @@ task generateVendorJson {
             name: 'TritonTechCore',
             version: project.version,
             uuid: 'a121b32c-1adf-484c-bb57-0d959dbbe62f',
+            frcYear: '2025',
             mavenUrls: ["file:///C:/Users/${userName}/.m2/repository/"],
             jsonUrl: "file:///C:/Users/${userName}/TritonTechCore/TritonTechCore.json",
             javaDependencies: [
