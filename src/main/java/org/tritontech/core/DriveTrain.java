@@ -118,8 +118,7 @@ public class DriveTrain extends SubsystemBase {
             SwerveModule frontRight,
             SwerveModule rearLeft,
             SwerveModule rearRight,
-            SwerveDrivePoseEstimator currentOdometry,
-            SwerveDrivePoseEstimator measuredOdometry,
+            SwerveDriveKinematics driveKinematics,
             SlewRateLimiter magLimiter,
             SlewRateLimiter rotLimiter,
             PIDConstants translationConstants,
@@ -140,8 +139,7 @@ public class DriveTrain extends SubsystemBase {
         m_frontRight = frontRight;
         m_rearLeft = rearLeft;
         m_rearLeft = rearRight;
-        m_currentOdometry = currentOdometry;
-        m_measuredOdometry = measuredOdometry;
+        m_driveKinematics = driveKinematics;
         m_magLimiter = magLimiter;
         m_rotLimiter = rotLimiter;
 
@@ -154,6 +152,22 @@ public class DriveTrain extends SubsystemBase {
                 m_rearLeft,
                 m_rearRight
         };
+
+        m_currentOdometry = new SwerveDrivePoseEstimator(
+                m_driveKinematics,
+                Rotation2d.fromDegrees(ang),
+                swervePos,
+                new Pose2d(),
+                stateStdDevs,
+                visionStdDevs);
+
+        m_measuredOdometry = new SwerveDrivePoseEstimator(
+                m_driveKinematics,
+                Rotation2d.fromDegrees(ang),
+                swervePos,
+                new Pose2d(),
+                stateStdDevs,
+                visionStdDevs);
 
         m_Vision = null;
         m_Vision = p_Vision;
