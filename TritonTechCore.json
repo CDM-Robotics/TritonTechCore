@@ -1,7 +1,7 @@
 {
     "fileName": "TritonTechCore.json",
     "name": "TritonTechCore",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "uuid": "a121b32c-1adf-484c-bb57-0d959dbbe62f",
     "mavenUrls": [
         "file:///C:/Users/runner/.m2/repository/"
@@ -11,7 +11,7 @@
         {
             "groupId": "org.tritontech",
             "artifactId": "TritonTechCore",
-            "version": "1.0.3"
+            "version": "1.0.4"
         }
     ],
     "jniDependencies": [
