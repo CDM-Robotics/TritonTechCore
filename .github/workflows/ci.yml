@@ -38,20 +38,24 @@ jobs:
           NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
           # Update build.gradle
           sed -i "s/version = '$CURRENT_VERSION'/version = '$NEW_VERSION'/" build.gradle
-          # Commit the change
+          # Generate TritonTechCore.json
+          ./gradlew generateVendorJson
+          # Commit the changes
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add build.gradle
-          git commit -m "Bump version to $NEW_VERSION"
+          git add build.gradle TritonTechCore.json
+          git commit -m "Bump version to $NEW_VERSION and update TritonTechCore.json"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and test
-        run: ./gradlew build --stacktrace
+        run: |
+          ./gradlew build --stacktrace
+          ./gradlew publishToMavenLocal
 
       - name: List build directory
-        run: ls -R build/libs/  # Debugging: Verify JAR name
+        run: ls -R build/libs/
 
       - name: Upload test results
         if: always()
@@ -67,4 +71,12 @@ jobs:
         with:
           name: jar-artifact
           path: build/libs/*.jar
+          retention-days: 7
+
+      - name: Upload vendor JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor-json
+          path: TritonTechCore.json
           retention-days: 7

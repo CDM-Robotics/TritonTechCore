@@ -81,3 +81,36 @@ publishing {
     mavenLocal()  // Local publishing for testing
   }
 }
+
+// Task to generate TritonTechCore.json with dynamic user name and version
+import groovy.json.JsonOutput
+task generateVendorJson {
+    description 'Generates TritonTechCore.json with dynamic user name and project version'
+    group 'WPILib'
+
+    doLast {
+        def userName = System.getProperty('user.name')
+        def json = [
+            fileName: 'TritonTechCore.json',
+            name: 'TritonTechCore',
+            version: project.version,
+            uuid: 'a121b32c-1adf-484c-bb57-0d959dbbe62f',
+            mavenUrls: ["file:///C:/Users/${userName}/.m2/repository/"],
+            jsonUrl: "file:///C:/Users/${userName}/TritonTechCore/TritonTechCore.json",
+            javaDependencies: [
+                [
+                    groupId: 'org.tritontech',
+                    artifactId: 'TritonTechCore',
+                    version: project.version
+                ]
+            ],
+            jniDependencies: [],
+            cppDependencies: []
+        ]
+        def jsonString = JsonOutput.prettyPrint(JsonOutput.toJson(json))
+        file('TritonTechCore.json').text = jsonString
+    }
+}
+
+// Make publishToMavenLocal depend on generateVendorJson
+publishToMavenLocal.dependsOn generateVendorJson
