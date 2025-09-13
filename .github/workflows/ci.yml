@@ -43,7 +43,7 @@ jobs:
           # Commit the changes
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add build.gradle TritonTechCore.json
+          git add --force build.gradle TritonTechCore.json
           git commit -m "Bump version to $NEW_VERSION and update TritonTechCore.json"
           git push
         env:
