@@ -38,13 +38,13 @@ jobs:
           NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
           # Update build.gradle
           sed -i "s/version = '$CURRENT_VERSION'/version = '$NEW_VERSION'/" build.gradle
-          # Generate TritonTechCore.json
+          # Generate TritonTechCore.json (but don't commit it)
           ./gradlew generateVendorJson
-          # Commit the changes
+          # Commit only build.gradle
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add --force build.gradle TritonTechCore.json
-          git commit -m "Bump version to $NEW_VERSION and update TritonTechCore.json"
+          git add build.gradle
+          git commit -m "Bump version to $NEW_VERSION"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
