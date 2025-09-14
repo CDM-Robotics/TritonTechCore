@@ -7,6 +7,10 @@ import com.revrobotics.spark.SparkMax;
 
 public class MotorFactory {
 
+    static {
+        VersionManager.initialize(); // Triggers VersionManager's static block
+    }
+
     // Pass in the type of motor controller (SPARK_MAX or SPARK_FLEX)
     public static SparkBase createMotor(MotorControllerType type, int deviceId, MotorType motorType) {
         switch (type) {

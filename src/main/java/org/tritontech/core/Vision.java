@@ -28,6 +28,11 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 import org.photonvision.PhotonUtils;
 
 public class Vision extends SubsystemBase {
+
+    static {
+        VersionManager.initialize(); // Triggers VersionManager's static block
+    }
+
     private final PhotonCamera camera;
     // private final PhotonCamera auxCamera;
     private final PhotonPoseEstimator photonEstimator;

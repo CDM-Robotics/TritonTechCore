@@ -2,6 +2,10 @@ package org.tritontech.core;
 
 public class SwerveUtils {
 
+    static {
+        VersionManager.initialize(); // Triggers VersionManager's static block
+    }
+
     /**
      * Steps a value towards a target with a specified step size.
      * 

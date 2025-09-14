@@ -23,6 +23,11 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class SwerveModule {
+
+  static {
+    VersionManager.initialize(); // Triggers VersionManager's static block
+  }
+
   // private final SparkMax m_drivingSparkMax;
   private final SparkBase m_drivingSpark;
   private final SparkMax m_turningSparkMax;

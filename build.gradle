@@ -9,6 +9,20 @@ version = '1.0.12'
 sourceCompatibility = '17'
 targetCompatibility = '17'
 
+def versionFile = file("$buildDir/resources/main/org/tritontech/core/version.properties")
+
+task generateVersionProperties {
+    description 'Generates version.properties with the project version'
+    group 'Build'
+    outputs.file versionFile
+    doLast {
+        versionFile.parentFile.mkdirs()
+        versionFile.text = "version=${project.version}"
+    }
+}
+
+processResources.dependsOn generateVersionProperties
+
 repositories {
   mavenCentral()
   maven { url 'https://frcmaven.wpi.edu/artifactory/release' }

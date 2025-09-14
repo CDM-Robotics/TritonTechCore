@@ -39,6 +39,10 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 public class DriveTrain extends SubsystemBase {
 
+    static {
+        VersionManager.initialize(); // Triggers VersionManager's static block
+    }
+
     // Create MAXSwerveModules
     SwerveModule[] SwerveModules;
     private SwerveModule m_frontLeft;
