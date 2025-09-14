@@ -33,14 +33,9 @@ import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-/* import frc.robot.Constants.HardwareConstants;
-import frc.robot.Constants.LocationConstants;
-import frc.robot.Constants.VisionConstants;
-import frc.robot.autos.Trajectories;
-import frc.robot.Constants.AutoConstants;
-import frc.robot.Constants.DriveConstants;
-import frc.robot.utils.SwerveUtils; */
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 public class DriveTrain extends SubsystemBase {
 
@@ -672,5 +667,20 @@ public class DriveTrain extends SubsystemBase {
 
     public void hardResetPose(Pose2d pose) {
         m_currentOdometry.resetPose(pose);
+    }
+
+    public CommandXboxController getDefaultDriveController(int port, double bumperFactor, double triggerFactor) {
+        CommandXboxController driver = new CommandXboxController(port);
+
+        driver.back().onTrue(new InstantCommand(() -> this.resetThrottle()));
+        driver.rightBumper().onTrue(new InstantCommand(() -> this.setDriverThrottle(bumperFactor)));
+        driver.rightBumper().onFalse(new InstantCommand(() -> this.setDriverThrottle(1.0)));
+        driver.rightTrigger().onTrue(new InstantCommand(() -> this.setDriverThrottle(triggerFactor)));
+        driver.rightTrigger().onFalse(new InstantCommand(() -> this.setDriverThrottle(1.0)));
+        driver.start().onTrue(new InstantCommand(() -> this.zeroHeading()));
+
+        this.setDefaultCommand(new DriveCmd(this, driver));
+
+        return driver;
     }
 }
