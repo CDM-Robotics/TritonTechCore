@@ -113,6 +113,7 @@ task generateVendorJson {
     }
 }
 
+
 // Make publishToMavenLocal depend on generateVendorJson
 publishToMavenLocal.dependsOn generateVendorJson
 build.dependsOn generateVendorJson
