@@ -133,7 +133,7 @@ public class DriveTrain extends SubsystemBase {
         m_frontLeft = frontLeft;
         m_frontRight = frontRight;
         m_rearLeft = rearLeft;
-        m_rearLeft = rearRight;
+        m_rearRight = rearRight;
         m_driveKinematics = driveKinematics;
         m_magLimiter = magLimiter;
         m_rotLimiter = rotLimiter;
