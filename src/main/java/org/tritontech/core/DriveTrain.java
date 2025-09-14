@@ -216,12 +216,10 @@ public class DriveTrain extends SubsystemBase {
         m_chassisConstantsInitialized = true;
     }
 
-    public void setDriveConstants(double directionSlewRate, double maxSpeedMPS, double maxAngularSpeed,
-            SwerveDriveKinematics driveKinematics) {
+    public void setDriveConstants(double directionSlewRate, double maxSpeedMPS, double maxAngularSpeed) {
         m_directionSlewRate = directionSlewRate;
         m_maxSpeedMPS = maxSpeedMPS;
         m_maxAngularSpeed = maxAngularSpeed;
-        m_driveKinematics = driveKinematics;
         m_driveConstantsInitialized = true;
     }
 
