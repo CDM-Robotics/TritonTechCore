@@ -117,6 +117,15 @@ esac
 
 CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
+# TritonTechCore mods
+# Check if /proc/version exists and contains MINGW
+if [ -f /proc/version ] && grep -qi "MINGW" /proc/version; then
+    JAVA_HOME="/c/Users/Public/wpilib/2025/jdk"
+    export JAVA_HOME
+    echo "Detected MinGW environment. JAVA_HOME set to $JAVA_HOME"
+else
+    echo "Not a MinGW environment or /proc/version not found. JAVA_HOME not modified."
+fi
 
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
