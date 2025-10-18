@@ -11,6 +11,7 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.studica.frc.AHRS;
 import com.studica.frc.AHRS.NavXComType;
 
+import choreo.trajectory.SwerveSample;
 import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.MathUtil;
@@ -42,6 +43,8 @@ public class DriveTrain extends SubsystemBase {
     static {
         VersionManager.initialize(); // Triggers VersionManager's static block
     }
+
+    private SwerveSample samp;
 
     // Create MAXSwerveModules
     SwerveModule[] SwerveModules;
@@ -113,6 +116,10 @@ public class DriveTrain extends SubsystemBase {
         isLiveUpdatedOdometry = live;
     }
 
+    public SwerveSample getSamp() {
+        return samp;
+    }
+
     public DriveTrain(SwerveModule frontLeft,
             SwerveModule frontRight,
             SwerveModule rearLeft,
@@ -122,7 +129,8 @@ public class DriveTrain extends SubsystemBase {
             SlewRateLimiter rotLimiter,
             PIDConstants translationConstants,
             PIDConstants rotationConstants,
-            Vision p_Vision) {
+            Vision p_Vision,
+            SwerveSample s) {
 
         m_driveConstantsInitialized = false;
         m_driveConstantsReported = false;
@@ -130,6 +138,7 @@ public class DriveTrain extends SubsystemBase {
         m_chassisConstantsReported = false;
         m_visionConstantsInitialized = false;
         m_visionConstantsReported = false;
+        samp = s;
 
         var stateStdDevs = VecBuilder.fill(0.1, 0.1, 0.1);
         var visionStdDevs = VecBuilder.fill(1, 1, 1);

@@ -30,6 +30,7 @@ repositories {
   maven { url 'https://maven.revrobotics.com/' }  // REV Robotics Maven repo
   maven { url 'https://dev.studica.com/maven/release/2025/' }  // Studica Maven repo
   maven { url 'https://3015rangerrobotics.github.io/pathplannerlib/repo' }  // PathplannerLib Maven repo
+//  maven { url 'https://lib.choreo.autos/dep', 'https://repo1.maven.org/maven2'}
 }
 
 dependencies {
@@ -57,6 +58,10 @@ dependencies {
   // PathplannerLib dependency
   implementation 'com.pathplanner.lib:PathplannerLib-java:2025.2.7'
 
+  // ChoreoLib dependency
+  //implementation 'org.choreo:choreo-lib:2025.0.3'
+  //implementation 'choreo:choreo-lib:2025.0.3'
+
   // Optional dependencies
   implementation 'org.ejml:ejml-simple:0.43.1'
   implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
@@ -64,6 +69,29 @@ dependencies {
   // Test dependencies
   testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+import groovy.json.JsonSlurper
+
+def vendordepsDir = file('vendordeps')
+def vendorJsons = vendordepsDir.listFiles()?.findAll { it.name.endsWith('.json') } ?: []
+
+vendorJsons.each { jsonFile ->
+    def json = new JsonSlurper().parse(jsonFile)
+
+    // ✅ Add each Maven URL separately
+    json.mavenUrls?.each { urlString ->
+        repositories {
+            maven { url urlString }
+        }
+    }
+
+    // ✅ Add each Java dependency
+    json.javaDependencies?.each { dep ->
+        dependencies {
+            implementation "${dep.groupId}:${dep.artifactId}:${dep.version}"
+        }
+    }
 }
 
 test {
@@ -94,6 +122,13 @@ publishing {
   repositories {
     mavenLocal()  // Local publishing for testing
   }
+}
+
+// Task to clear build cache
+task clearBuildCache(type: Delete) {
+    description 'Clears the build cache to force dependency re-resolution'
+    group 'Build'
+    delete fileTree(dir: 'build/tmp/.cache')
 }
 
 // Task to generate TritonTechCore.json with dynamic user name and version
@@ -127,6 +162,8 @@ task generateVendorJson {
     }
 }
 
+// REMEMBER THIS COMMAND, it cleans up the vccode cache and project files!!!
+// ./gradlew cleanEclipse eclipse
 
 // Make publishToMavenLocal depend on generateVendorJson
 publishToMavenLocal.dependsOn generateVendorJson
