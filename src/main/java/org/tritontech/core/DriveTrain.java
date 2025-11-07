@@ -456,9 +456,10 @@ public class DriveTrain extends SubsystemBase {
         SmartDashboard.putNumber("Y", Units.metersToInches(getPose().getY()));
         SmartDashboard.putNumber("Angle", getAngle());
 
-        m_Vision.getTargetingYaw();
-
-        SmartDashboard.putBoolean("DEBUG Vision Estimate Present", visionEst.isPresent());
+        if(visionEst.isPresent()) {
+            m_Vision.getTargetingYaw();
+            SmartDashboard.putBoolean("DEBUG Vision Estimate Present", visionEst.isPresent());
+        }
 
         visionEst.ifPresent(
                 est -> {
