@@ -30,7 +30,7 @@ public class SwerveModule {
 
   // private final SparkMax m_drivingSparkMax;
   private final SparkBase m_drivingSpark;
-  private final SparkMax m_turningSparkMax;
+  private final SparkBase m_turningSpark;
 
   private final RelativeEncoder m_drivingEncoder;
   private final AbsoluteEncoder m_turningEncoder;
@@ -47,6 +47,8 @@ public class SwerveModule {
 
   private double m_previousVelocity;
 
+
+
   /**
    * Constructs a MAXSwerveModule and configures the driving and turning motor,
    * encoder, and PID controller. This configuration is specific to the REV
@@ -55,6 +57,7 @@ public class SwerveModule {
    */
   public SwerveModule(int drivingCANId,
       MotorControllerType drivingSparkType,
+      MotorControllerType turningSparkType,
       int turningCANId,
       double chassisAngularOffset,
       String p_moduleChannel,
@@ -62,20 +65,19 @@ public class SwerveModule {
       SparkBaseConfig turningConfig,
       SimpleMotorFeedforward drivingFeedForward) {
     m_drivingSpark = MotorFactory.createMotor(drivingSparkType, drivingCANId, MotorType.kBrushless);
-
-    m_turningSparkMax = new SparkMax(turningCANId, MotorType.kBrushless);
+    m_turningSpark = MotorFactory.createMotor(turningSparkType, turningCANId, MotorType.kBrushless);
 
     // Setup encoders and PID controllers for the driving and turning SPARKS MAX.
     m_drivingEncoder = m_drivingSpark.getEncoder();
-    m_turningEncoder = m_turningSparkMax.getAbsoluteEncoder();
+    m_turningEncoder = m_turningSpark.getAbsoluteEncoder();
 
     m_drivingClosedLoopController = m_drivingSpark.getClosedLoopController();
-    m_turningClosedLoopController = m_turningSparkMax.getClosedLoopController();
+    m_turningClosedLoopController = m_turningSpark.getClosedLoopController();
 
     m_drivingSpark.configure(drivingConfig, ResetMode.kResetSafeParameters,
         PersistMode.kPersistParameters);
 
-    m_turningSparkMax.configure(turningConfig, ResetMode.kResetSafeParameters,
+    m_turningSpark.configure(turningConfig, ResetMode.kResetSafeParameters,
         PersistMode.kPersistParameters);
 
     m_chassisAngularOffset = chassisAngularOffset;
@@ -86,6 +88,20 @@ public class SwerveModule {
 
     m_drivingFeedForward = drivingFeedForward;
   }
+
+  @Deprecated
+  public SwerveModule(int drivingCANId,
+      MotorControllerType drivingSparkType,
+      int turningCANId,
+      double chassisAngularOffset,
+      String p_moduleChannel,
+      SparkBaseConfig drivingConfig,
+      SparkBaseConfig turningConfig,
+      SimpleMotorFeedforward drivingFeedForward) {
+
+        this(drivingCANId, drivingSparkType, MotorControllerType.SPARK_MAX, turningCANId, chassisAngularOffset, p_moduleChannel,
+        drivingConfig, turningConfig, drivingFeedForward);
+      }
 
   /**
    * Returns the current state of the module.
