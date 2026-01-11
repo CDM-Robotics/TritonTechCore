@@ -50,13 +50,13 @@ dependencies {
   implementation 'edu.wpi.first.thirdparty.frc2025.opencv:opencv-java:4.10.0-3'
 
   // REV Robotics dependency
-  implementation 'com.revrobotics.frc:REVLib-java:2025.0.3'
+  implementation 'com.revrobotics.frc:REVLib-java:2026.0.0'
 
   // Studica dependency
-  implementation 'com.studica.frc:Studica-java:2025.0.1'
+  implementation 'com.studica.frc:Studica-java:2026.0.0-beta'
 
   // PathplannerLib dependency
-  implementation 'com.pathplanner.lib:PathplannerLib-java:2025.2.7'
+  //implementation 'com.pathplanner.lib:PathplannerLib-java:2025.2.7'
 
   // ChoreoLib dependency
   //implementation 'org.choreo:choreo-lib:2025.0.3'
