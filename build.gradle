@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'org.tritontech'
-version = '1.0.18'
+version = '1.0.19'
 sourceCompatibility = '17'
 targetCompatibility = '17'
 
@@ -115,7 +115,7 @@ publishing {
     mavenJava(MavenPublication) {
       groupId = 'org.tritontech'
       artifactId = 'TritonTechCore'
-      version = '1.0.18'
+      version = '1.0.19'
       from components.java
     }
   }
