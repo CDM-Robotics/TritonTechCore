@@ -1,6 +1,6 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2025.3.2"
+    id "edu.wpi.first.GradleRIO" version "2026.1.1"
     id 'maven-publish'
 }
 
@@ -28,7 +28,7 @@ repositories {
   maven { url 'https://frcmaven.wpi.edu/artifactory/release' }
   maven { url 'https://frcmaven.wpi.edu/artifactory/development' }
   maven { url 'https://maven.revrobotics.com/' }  // REV Robotics Maven repo
-  maven { url 'https://dev.studica.com/maven/release/2025/' }  // Studica Maven repo
+  maven { url 'https://dev.studica.com/maven/release/2026/' }  // Studica Maven repo
   maven { url 'https://3015rangerrobotics.github.io/pathplannerlib/repo' }  // PathplannerLib Maven repo
 //  maven { url 'https://lib.choreo.autos/dep', 'https://repo1.maven.org/maven2'}
 }
@@ -39,15 +39,15 @@ dependencies {
   implementation wpi.java.vendor.java()
 
   // WPILib Java dependencies
-  implementation 'edu.wpi.first.wpilibj:wpilibj-java:2025.3.2'  // Pinned to 2025.3.2
-  implementation 'edu.wpi.first.wpiutil:wpiutil-java:2025.3.2'
-  implementation 'edu.wpi.first.wpimath:wpimath-java:2025.3.2'
-  implementation 'edu.wpi.first.wpiunits:wpiunits-java:2025.3.2'
-  implementation 'edu.wpi.first.ntcore:ntcore-java:2025.3.2'
-  implementation 'edu.wpi.first.cscore:cscore-java:2025.3.2'
-  implementation 'edu.wpi.first.cameraserver:cameraserver-java:2025.3.2'
-  implementation 'edu.wpi.first.hal:hal-java:2025.3.2'
-  implementation 'edu.wpi.first.thirdparty.frc2025.opencv:opencv-java:4.10.0-2'
+  implementation 'edu.wpi.first.wpilibj:wpilibj-java:2026.1.1'  // Pinned to 2026.1.1
+  implementation 'edu.wpi.first.wpiutil:wpiutil-java:2026.1.1'
+  implementation 'edu.wpi.first.wpimath:wpimath-java:2026.1.1'
+  implementation 'edu.wpi.first.wpiunits:wpiunits-java:2026.1.1'
+  implementation 'edu.wpi.first.ntcore:ntcore-java:2026.1.1'
+  implementation 'edu.wpi.first.cscore:cscore-java:2026.1.1'
+  implementation 'edu.wpi.first.cameraserver:cameraserver-java:2026.1.1'
+  implementation 'edu.wpi.first.hal:hal-java:2026.1.1'
+  implementation 'edu.wpi.first.thirdparty.frc2025.opencv:opencv-java:4.10.0-3'
 
   // REV Robotics dependency
   implementation 'com.revrobotics.frc:REVLib-java:2025.0.3'
@@ -144,7 +144,7 @@ task generateVendorJson {
             name: 'TritonTechCore',
             version: project.version,
             uuid: 'a121b32c-1adf-484c-bb57-0d959dbbe62f',
-            frcYear: '2025',
+            frcYear: '2026',
             mavenUrls: ["file:///C:/Users/${userName}/.m2/repository/"],
             jsonUrl: "file:///C:/Users/${userName}/TritonTechCore/TritonTechCore.json",
             javaDependencies: [

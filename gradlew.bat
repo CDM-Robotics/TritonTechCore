@@ -39,7 +39,7 @@ for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
 set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
 
 @rem TritonTechCore
-set JAVA_HOME=C:\Users\Public\wpilib\2025\jdk
+set JAVA_HOME=C:\Users\Public\wpilib\2026\jdk
 echo "Building with Java Version"
 %JAVA_HOME%/bin/java.exe --version
 

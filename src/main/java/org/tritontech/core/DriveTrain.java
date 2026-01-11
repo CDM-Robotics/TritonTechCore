@@ -4,10 +4,11 @@ import java.util.Optional;
 
 import org.photonvision.EstimatedRobotPose;
 
+/*
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
-import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController; */
 import com.studica.frc.AHRS;
 import com.studica.frc.AHRS.NavXComType;
 
@@ -127,8 +128,8 @@ public class DriveTrain extends SubsystemBase {
             SwerveDriveKinematics driveKinematics,
             SlewRateLimiter magLimiter,
             SlewRateLimiter rotLimiter,
-            PIDConstants translationConstants,
-            PIDConstants rotationConstants,
+/*             PIDConstants translationConstants,
+            PIDConstants rotationConstants, */
             Vision p_Vision,
             SwerveSample s) {
 
@@ -184,7 +185,7 @@ public class DriveTrain extends SubsystemBase {
         m_nearestTargetPose = null;
         isLiveUpdatedOdometry = false;
 
-        try {
+/*         try {
             RobotConfig config = RobotConfig.fromGUISettings();
             AutoBuilder.configure(
                     this::getPose, // Robot pose supplier
@@ -209,7 +210,7 @@ public class DriveTrain extends SubsystemBase {
             );
         } catch (Exception e) {
             DriverStation.reportError("Failed to load PathPlanner config and configure AutoBuilder", e.getStackTrace());
-        }
+        } */
     }
 
     public void setDriveConfig() {

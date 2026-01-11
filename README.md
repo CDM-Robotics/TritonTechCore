@@ -6,6 +6,13 @@ A core library for FRC robotics by CDM Robotics.
 ## About
 A library for FRC robot development, built with WPILib and licensed under the MIT License.
 
+## Building
+From git bash, run
+./gradlew clean build --refresh-dependencies
+
+## To deploy to your local maven repository
+./gradlew publishToMavenLocal
+
 ## License
 MIT License – see [LICENSE](LICENSE) for details.
 
