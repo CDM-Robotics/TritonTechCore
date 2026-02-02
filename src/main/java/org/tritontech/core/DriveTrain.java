@@ -18,6 +18,7 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -79,6 +80,11 @@ public class DriveTrain extends SubsystemBase {
 
     private ChassisSpeeds targetChassisSpeeds = new ChassisSpeeds();
 
+    // Choreo parameters
+    private final PIDController xController = new PIDController(10.0, 0.0, 0.0);
+    private final PIDController yController = new PIDController(10.0, 0.0, 0.0);
+    private final PIDController headingController = new PIDController(7.5, 0.0, 0.0);
+
     // private final Pigeon2 m_gyro = new Pigeon2(19,"rio");
     private final AHRS m_gyro2 = new AHRS(NavXComType.kMXP_SPI);
     private double m_angleOffset;
@@ -128,8 +134,6 @@ public class DriveTrain extends SubsystemBase {
             SwerveDriveKinematics driveKinematics,
             SlewRateLimiter magLimiter,
             SlewRateLimiter rotLimiter,
-/*             PIDConstants translationConstants,
-            PIDConstants rotationConstants, */
             Vision p_Vision,
             SwerveSample s) {
 
@@ -535,59 +539,21 @@ public class DriveTrain extends SubsystemBase {
         return tagID;
     }
 
-    /**
-     * Using the PathPlanner pathfinding algorithm, pathfind from our current
-     * position to a path. Used
-     * in teleop to pathfind to the start of a known path location. Requires
-     * AutoPathBuilder to be
-     * configured before use.
-     * 
-     * @param wanted_path Path we want to pathfind to. Known location in TeleopPath.
-     * @return Command to follow the path that it found.
-     */
-    /*
-     * public Command teleopPathfindTo(TeleopPath wanted_path){
-     * PathPlannerPath path = null;
-     * 
-     * if (DriverStation.getAlliance().isPresent()){
-     * switch (wanted_path) {
-     * case ID18:
-     * if(DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
-     * try {
-     * path = PathPlannerPath.fromPathFile("ID18");
-     * } catch(Exception e) {
-     * return new InstantCommand();
-     * }
-     * }
-     * break;
-     * 
-     * default:
-     * // no valid path to select. Do nothing
-     * return new InstantCommand();
-     * }
-     * } else {
-     * // Driver alliance not selected
-     * return new InstantCommand();
-     * }
-     * 
-     * if(path == null) {
-     * return new InstantCommand();
-     * }
-     * 
-     * // Create the constraints to use while pathfinding. The constraints defined
-     * in the path will only be used for the path.
-     * PathConstraints constraints = new PathConstraints(
-     * 3.0, 2.0,
-     * Units.degreesToRadians(360), Units.degreesToRadians(180));
-     * 
-     * Command pathfindingCommand = AutoBuilder.pathfindToPose(
-     * new Pose2d(Units.inchesToMeters(128.25), Units.inchesToMeters(164.0),
-     * Rotation2d.kZero),
-     * constraints
-     * );
-     * return pathfindingCommand;
-     * }
-     */
+    public void followTrajectory(SwerveSample sample) {
+        // Get the current pose of the robot
+        Pose2d pose = getPose();
+
+        // Generate the next speeds for the robot
+        ChassisSpeeds speeds = new ChassisSpeeds(
+            sample.vx + xController.calculate(pose.getX(), sample.x),
+            sample.vy + yController.calculate(pose.getY(), sample.y),
+            sample.omega + headingController.calculate(pose.getRotation().getRadians(), sample.heading)
+        );
+
+        // Apply the generated speeds
+        //driveFieldRelative(speeds);
+        drive(sample.vx, sample.vy, sample.omega, true, true);
+    }
 
     public void driveAutoBuilder(ChassisSpeeds p_ChassisSpeed) {
         // ChassisSpeeds targetSpeeds = ChassisSpeeds.discretize(p_ChassisSpeed, 0.02);
