@@ -12,6 +12,7 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController; */
 import com.studica.frc.AHRS;
 import com.studica.frc.AHRS.NavXComType;
 
+import choreo.auto.AutoFactory;
 import choreo.trajectory.SwerveSample;
 import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
@@ -36,6 +37,7 @@ import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -84,6 +86,7 @@ public class DriveTrain extends SubsystemBase {
     private final PIDController xController = new PIDController(10.0, 0.0, 0.0);
     private final PIDController yController = new PIDController(10.0, 0.0, 0.0);
     private final PIDController headingController = new PIDController(7.5, 0.0, 0.0);
+    private final AutoFactory autoFactory;
 
     // private final Pigeon2 m_gyro = new Pigeon2(19,"rio");
     private final AHRS m_gyro2 = new AHRS(NavXComType.kMXP_SPI);
@@ -189,6 +192,13 @@ public class DriveTrain extends SubsystemBase {
         m_nearestTargetPose = null;
         isLiveUpdatedOdometry = false;
 
+        autoFactory = new AutoFactory(
+            this::getPose, // A function that returns the current robot pose
+            this::resetOdometry, // A function that resets the current robot pose to the provided Pose2d
+            this::followTrajectory, // The drive subsystem trajectory follower 
+            true, // If alliance flipping should be enabled 
+            this
+        );
 /*         try {
             RobotConfig config = RobotConfig.fromGUISettings();
             AutoBuilder.configure(
@@ -661,5 +671,10 @@ public class DriveTrain extends SubsystemBase {
         this.setDefaultCommand(new DriveCmd(this, driver));
 
         return driver;
+    }
+
+    public Command buildTrajectory(String trajectory) {
+        autoFactory.resetOdometry(trajectory);
+        return autoFactory.trajectoryCmd(trajectory);
     }
 }
