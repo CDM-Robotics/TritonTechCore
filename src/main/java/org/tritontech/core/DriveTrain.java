@@ -199,32 +199,6 @@ public class DriveTrain extends SubsystemBase {
             true, // If alliance flipping should be enabled 
             this
         );
-/*         try {
-            RobotConfig config = RobotConfig.fromGUISettings();
-            AutoBuilder.configure(
-                    this::getPose, // Robot pose supplier
-                    this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
-                    this::getChassisSpeed, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-                    this::driveAutoBuilder, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
-                    new PPHolonomicDriveController( // HolonomicPathFollowerConfig, this should likely live in your
-                                                    // Constants class
-                            translationConstants, // Translation PID constants
-                            rotationConstants // Rotation PID constants
-                    ),
-                    config,
-                    () -> {
-                        var alliance = DriverStation.getAlliance();
-                        if (alliance.isPresent()) {
-                            return alliance.get() == DriverStation.Alliance.Red;
-                        }
-
-                        return false;
-                    },
-                    this // Reference to this subsystem to set requirements
-            );
-        } catch (Exception e) {
-            DriverStation.reportError("Failed to load PathPlanner config and configure AutoBuilder", e.getStackTrace());
-        } */
     }
 
     public void setDriveConfig() {
@@ -351,7 +325,7 @@ public class DriveTrain extends SubsystemBase {
     }
 
     public double getAngle() {
-        return Math.toDegrees(MathUtil.angleModulus(-Rotation2d.fromDegrees(m_gyro2.getAngle()).getRadians()))
+        return Math.toDegrees(MathUtil.angleModulus(Rotation2d.fromDegrees(m_gyro2.getAngle()).getRadians()))
                 + m_angleOffset;
     }
 
@@ -553,6 +527,8 @@ public class DriveTrain extends SubsystemBase {
         // Get the current pose of the robot
         Pose2d pose = getPose();
 
+        headingController.enableContinuousInput(-Math.PI, Math.PI);
+
         // Generate the next speeds for the robot
         ChassisSpeeds speeds = new ChassisSpeeds(
             sample.vx + xController.calculate(pose.getX(), sample.x),
@@ -561,8 +537,8 @@ public class DriveTrain extends SubsystemBase {
         );
 
         // Apply the generated speeds
-        //driveFieldRelative(speeds);
-        drive(sample.vx, sample.vy, sample.omega, true, true);
+        //drive(sample.vx, sample.vy, sample.omega, true, true);
+        driveAutoBuilder(speeds);
     }
 
     public void driveAutoBuilder(ChassisSpeeds p_ChassisSpeed) {
