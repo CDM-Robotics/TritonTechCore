@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'org.tritontech'
-version = '1.0.22'
+version = '1.0.23'
 sourceCompatibility = '17'
 targetCompatibility = '17'
 
@@ -153,7 +153,7 @@ publishing {
     mavenJava(MavenPublication) {
       groupId = 'org.tritontech'
       artifactId = 'TritonTechCore'
-      version = '1.0.22'
+      version = '1.0.23'
       from components.java
     }
   }
