@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'org.tritontech'
-version = '1.0.23'
+version = '1.0.21'
 sourceCompatibility = '17'
 targetCompatibility = '17'
 
@@ -33,66 +33,6 @@ repositories {
   maven { url 'https://repo1.maven.org/maven2'}
   //  maven { url 'https://3015rangerrobotics.github.io/pathplannerlib/repo' }  // PathplannerLib Maven repo
 }
-
-// New for vendordeps
-import groovy.json.JsonSlurper
-
-def vendordepsDir = file('vendordeps')
-def vendorJsons = vendordepsDir.listFiles()?.findAll { it.name.endsWith('.json') } ?: []
-
-def vendorRepos = []
-def vendorJavaDeps = []
-def vendorJniDeps = []
-
-vendorJsons.each { jsonFile ->
-    def json = new JsonSlurper().parse(jsonFile)
-
-    // Add Maven URLs
-    if (json.mavenUrls) {
-        vendorRepos.addAll(json.mavenUrls)
-    }
-
-    // Add Java dependencies
-    json.javaDependencies?.each { dep ->
-        vendorJavaDeps << "${dep.groupId}:${dep.artifactId}:${dep.version}"
-    }
-
-    // Add JNI dependencies (native libraries)
-    json.jniDependencies?.each { dep ->
-        dep.artifactId = dep.artifactId ?: dep.artifact
-        vendorJniDeps << [
-            group: dep.groupId,
-            name: dep.artifactId,
-            version: dep.version,
-            classifier: dep.classifier ?: null
-        ]
-    }
-}
-
-// Inject vendor repositories
-repositories {
-    vendorRepos.each { repoUrl ->
-        maven { url repoUrl }
-    }
-}
-
-// Inject vendor Java dependencies
-dependencies {
-    vendorJavaDeps.each { dep ->
-        implementation dep
-    }
-
-    vendorJniDeps.each { dep ->
-        implementation("${dep.group}:${dep.name}:${dep.version}") {
-            if (dep.classifier) {
-                artifact {
-                    classifier = dep.classifier
-                }
-            }
-        }
-    }
-}
-// end new
 
 dependencies {
   annotationProcessor wpi.java.deps.wpilibAnnotations()
@@ -132,6 +72,15 @@ dependencies {
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+import groovy.json.JsonSlurper
+
+def vendordepsDir = file('vendordeps')
+def vendorJsons = vendordepsDir.listFiles()?.findAll { it.name.endsWith('.json') } ?: []
+
+vendorJsons.each { jsonFile ->
+    def json = new JsonSlurper().parse(jsonFile)
+}
+
 test {
   useJUnitPlatform()
   testLogging {
@@ -153,7 +102,7 @@ publishing {
     mavenJava(MavenPublication) {
       groupId = 'org.tritontech'
       artifactId = 'TritonTechCore'
-      version = '1.0.23'
+      version = '1.0.21'
       from components.java
     }
   }
