@@ -85,7 +85,7 @@ public class DriveTrain extends SubsystemBase {
     // Choreo parameters
     private final PIDController xController = new PIDController(10.0, 0.0, 0.0);
     private final PIDController yController = new PIDController(10.0, 0.0, 0.0);
-    private final PIDController headingController = new PIDController(7.5, 0.0, 0.0);
+    private final PIDController headingController = new PIDController(3.0, 0.0, .2);
     private final AutoFactory autoFactory;
 
     // private final Pigeon2 m_gyro = new Pigeon2(19,"rio");
@@ -199,6 +199,8 @@ public class DriveTrain extends SubsystemBase {
             true, // If alliance flipping should be enabled 
             this
         );
+
+        System.out.println("#### SIGN MOD 8 ####");
     }
 
     public void setDriveConfig() {
@@ -325,7 +327,7 @@ public class DriveTrain extends SubsystemBase {
     }
 
     public double getAngle() {
-        return Math.toDegrees(MathUtil.angleModulus(Rotation2d.fromDegrees(m_gyro2.getAngle()).getRadians()))
+        return Math.toDegrees(MathUtil.angleModulus(-Rotation2d.fromDegrees(m_gyro2.getAngle()).getRadians()))
                 + m_angleOffset;
     }
 
@@ -529,11 +531,13 @@ public class DriveTrain extends SubsystemBase {
 
         headingController.enableContinuousInput(-Math.PI, Math.PI);
 
+        double headingError = MathUtil.angleModulus(sample.heading - pose.getRotation().getRadians());
+
         // Generate the next speeds for the robot
         ChassisSpeeds speeds = new ChassisSpeeds(
             sample.vx + xController.calculate(pose.getX(), sample.x),
             sample.vy + yController.calculate(pose.getY(), sample.y),
-            sample.omega + headingController.calculate(pose.getRotation().getRadians(), sample.heading)
+            sample.omega + headingController.calculate(0.0, headingError)
         );
 
         // Apply the generated speeds
@@ -545,7 +549,7 @@ public class DriveTrain extends SubsystemBase {
         // ChassisSpeeds targetSpeeds = ChassisSpeeds.discretize(p_ChassisSpeed, 0.02);
 
         ChassisSpeeds targetSpeeds = ChassisSpeeds.discretize(new ChassisSpeeds(p_ChassisSpeed.vxMetersPerSecond,
-                p_ChassisSpeed.vyMetersPerSecond, -p_ChassisSpeed.omegaRadiansPerSecond), 0.02);
+                p_ChassisSpeed.vyMetersPerSecond, p_ChassisSpeed.omegaRadiansPerSecond), 0.02);
         SwerveModuleState[] targetStates = m_driveKinematics.toSwerveModuleStates(targetSpeeds);
 
         setModuleStates(targetStates);
@@ -651,6 +655,8 @@ public class DriveTrain extends SubsystemBase {
 
     public Command buildTrajectory(String trajectory) {
         autoFactory.resetOdometry(trajectory);
+        headingController.reset();
+        
         return autoFactory.trajectoryCmd(trajectory);
     }
 }
