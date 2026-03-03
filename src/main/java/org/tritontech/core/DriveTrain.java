@@ -85,7 +85,7 @@ public class DriveTrain extends SubsystemBase {
     // Choreo parameters
     private final PIDController xController = new PIDController(10.0, 0.0, 0.0);
     private final PIDController yController = new PIDController(10.0, 0.0, 0.0);
-    private final PIDController headingController = new PIDController(3.0, 0.0, .2);
+    private PIDController m_headingController;
     private final AutoFactory autoFactory;
 
     // private final Pigeon2 m_gyro = new Pigeon2(19,"rio");
@@ -529,7 +529,7 @@ public class DriveTrain extends SubsystemBase {
         // Get the current pose of the robot
         Pose2d pose = getPose();
 
-        headingController.enableContinuousInput(-Math.PI, Math.PI);
+        m_headingController.enableContinuousInput(-Math.PI, Math.PI);
 
         double headingError = MathUtil.angleModulus(sample.heading - pose.getRotation().getRadians());
 
@@ -537,7 +537,7 @@ public class DriveTrain extends SubsystemBase {
         ChassisSpeeds speeds = new ChassisSpeeds(
             sample.vx + xController.calculate(pose.getX(), sample.x),
             sample.vy + yController.calculate(pose.getY(), sample.y),
-            sample.omega + headingController.calculate(0.0, headingError)
+            sample.omega + m_headingController.calculate(0.0, headingError)
         );
 
         // Apply the generated speeds
@@ -653,7 +653,9 @@ public class DriveTrain extends SubsystemBase {
         return driver;
     }
 
-    public Command buildTrajectory(String trajectory) {
+    public Command buildTrajectory(String trajectory, PIDController headingController) {
+        m_headingController = headingController;
+        m_headingController.reset();
         autoFactory.resetOdometry(trajectory);
         headingController.reset();
         
