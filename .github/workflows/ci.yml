@@ -12,9 +12,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
-    container:
-      image: ubuntu-24.04:20260224.36.1
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
