@@ -8,8 +8,8 @@ import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkBase;
-import com.revrobotics.spark.SparkBase.PersistMode;
-import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
@@ -44,9 +44,6 @@ public class SwerveModule {
 
   private double m_chassisAngularOffset = 0;
   private SwerveModuleState m_desiredState = new SwerveModuleState(0.0, new Rotation2d());
-
-  private double m_previousVelocity;
-
 
 
   /**
@@ -150,14 +147,14 @@ public class SwerveModule {
     // + AccelerationThingy), CANSparkMax.ControlType.kVelocity);
     // m_turningPIDController.setReference(optimizedDesiredState.angle.getRadians(),
     // CANSparkMax.ControlType.kPosition);
-    m_drivingClosedLoopController.setReference((correctedDesiredState.speedMetersPerSecond),
+    m_drivingClosedLoopController.setSetpoint((correctedDesiredState.speedMetersPerSecond),
         SparkMax.ControlType.kVelocity, ClosedLoopSlot.kSlot0,
         m_drivingFeedForward.calculate(correctedDesiredState.speedMetersPerSecond));
-    m_turningClosedLoopController.setReference(correctedDesiredState.angle.getRadians(),
+    
+    m_turningClosedLoopController.setSetpoint(correctedDesiredState.angle.getRadians(),
         SparkMax.ControlType.kPosition);
 
     m_desiredState = desiredState;
-    m_previousVelocity = m_desiredState.speedMetersPerSecond;
   }
 
   public void telemetry() {

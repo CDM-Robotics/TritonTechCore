@@ -83,8 +83,8 @@ public class DriveTrain extends SubsystemBase {
     private ChassisSpeeds targetChassisSpeeds = new ChassisSpeeds();
 
     // Choreo parameters
-    private final PIDController xController = new PIDController(10.0, 0.0, 0.0);
-    private final PIDController yController = new PIDController(10.0, 0.0, 0.0);
+    private final PIDController xController = new PIDController(2.0, 0.0, 0.0);
+    private final PIDController yController = new PIDController(2.0, 0.0, 0.0);
     private PIDController m_headingController;
     private final AutoFactory autoFactory;
 
@@ -199,8 +199,6 @@ public class DriveTrain extends SubsystemBase {
             true, // If alliance flipping should be enabled 
             this
         );
-
-        System.out.println("#### SIGN MOD 8 ####");
     }
 
     public void setDriveConfig() {
@@ -529,20 +527,38 @@ public class DriveTrain extends SubsystemBase {
         // Get the current pose of the robot
         Pose2d pose = getPose();
 
-        m_headingController.enableContinuousInput(-Math.PI, Math.PI);
+        // 1. Sum up the Field-Relative velocities
+        double targetFieldVx = sample.vx + xController.calculate(pose.getX(), sample.x);
+        double targetFieldVy = sample.vy + yController.calculate(pose.getY(), sample.y);
+
+        // Use the PID controller correctly (SetPoint vs Measurement)
+        double targetOmega = sample.omega + m_headingController.calculate(
+            pose.getRotation().getRadians(),
+            sample.heading
+        );
+
+        // 2. CONVERT Field-Relative TO Robot-Relative
+        ChassisSpeeds robotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+            targetFieldVx,
+            targetFieldVy,
+            targetOmega,
+            pose.getRotation() // Crucial: use the current robot heading
+        );
+
+        // 3. Pass the ROBOT-RELATIVE speeds to your builder
+        driveAutoBuilder(robotRelativeSpeeds);
+
+        /* m_headingController.enableContinuousInput(-Math.PI, Math.PI);
 
         double headingError = MathUtil.angleModulus(sample.heading - pose.getRotation().getRadians());
 
-        // Generate the next speeds for the robot
         ChassisSpeeds speeds = new ChassisSpeeds(
             sample.vx + xController.calculate(pose.getX(), sample.x),
             sample.vy + yController.calculate(pose.getY(), sample.y),
             sample.omega + m_headingController.calculate(0.0, headingError)
         );
 
-        // Apply the generated speeds
-        //drive(sample.vx, sample.vy, sample.omega, true, true);
-        driveAutoBuilder(speeds);
+        driveAutoBuilder(speeds); */
     }
 
     public void driveAutoBuilder(ChassisSpeeds p_ChassisSpeed) {
