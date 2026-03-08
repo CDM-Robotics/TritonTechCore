@@ -108,6 +108,8 @@ public class DriveTrain extends SubsystemBase {
     int every = 0;
     private boolean autoApproach = false;
 
+    double desiredBias = 0.0;
+
     Field2d field;
     Field2d fieldEst;
 
@@ -234,6 +236,19 @@ public class DriveTrain extends SubsystemBase {
     public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative, boolean rateLimit) {
         double xSpeedCommanded;
         double ySpeedCommanded;
+
+        double bias = 0.0;
+
+        if(Math.abs(rot) < 0.05) {
+            double forwardThreshold = 0.01;
+            if(xSpeed > forwardThreshold) {
+                bias += desiredBias;
+            } else if(xSpeed < -forwardThreshold) {
+                bias -= desiredBias;
+            }
+        }
+
+        rot += bias;
 
         if (!m_driveConstantsInitialized) {
             if (!m_driveConstantsReported) {
@@ -676,5 +691,9 @@ public class DriveTrain extends SubsystemBase {
         headingController.reset();
         
         return autoFactory.trajectoryCmd(trajectory);
+    }
+
+    public void setGyroBias(double b) {
+        desiredBias = b;
     }
 }
