@@ -13,6 +13,7 @@ import com.studica.frc.AHRS;
 import com.studica.frc.AHRS.NavXComType;
 
 import choreo.auto.AutoFactory;
+import choreo.util.ChoreoAllianceFlipUtil;
 import choreo.trajectory.SwerveSample;
 import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
@@ -198,7 +199,7 @@ public class DriveTrain extends SubsystemBase {
             this::getPose, // A function that returns the current robot pose
             this::resetOdometry, // A function that resets the current robot pose to the provided Pose2d
             this::followTrajectory, // The drive subsystem trajectory follower 
-            true, // If alliance flipping should be enabled 
+            false, // If alliance flipping should be enabled 
             this
         );
     }
@@ -557,6 +558,7 @@ public class DriveTrain extends SubsystemBase {
             targetFieldVx,
             targetFieldVy,
             targetOmega,
+        //    sample.getPose().getRotation()
             pose.getRotation() // Crucial: use the current robot heading
         );
 
@@ -685,19 +687,25 @@ public class DriveTrain extends SubsystemBase {
     }
 
     public Command buildTrajectory(String trajectory, PIDController headingController) {
+        return buildTrajectory(trajectory, headingController, false);
+    }
+
+    public Command buildTrajectory(String trajectory, PIDController headingController, boolean resetPose) {
+        Command resetCmd = null;
         m_headingController = headingController;
         m_headingController.reset();
         autoFactory.resetOdometry(trajectory);
         headingController.reset();
 
-        Command resetCmd = autoFactory.resetOdometry(trajectory);
+        if(resetPose) {
+            resetCmd = autoFactory.resetOdometry(trajectory);
+        }
+
         Command traj = autoFactory.trajectoryCmd(trajectory);
         
-       // m_DriveTrain.hardResetPose(pose);
-        //m_DriveTrain.resetMeasuredOdometry(pose); 
+        return ((resetPose && (resetCmd != null)) ? resetCmd.andThen(traj) : traj);
         
-        //return resetCmd.andThen(traj);
-        return resetCmd;
+    //    return resetCmd;
     }
 
     public void setGyroBias(double b) {
