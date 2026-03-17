@@ -689,8 +689,15 @@ public class DriveTrain extends SubsystemBase {
         m_headingController.reset();
         autoFactory.resetOdometry(trajectory);
         headingController.reset();
+
+        Command resetCmd = autoFactory.resetOdometry(trajectory);
+        Command traj = autoFactory.trajectoryCmd(trajectory);
         
-        return autoFactory.trajectoryCmd(trajectory);
+       // m_DriveTrain.hardResetPose(pose);
+        //m_DriveTrain.resetMeasuredOdometry(pose); 
+        
+        //return resetCmd.andThen(traj);
+        return resetCmd;
     }
 
     public void setGyroBias(double b) {
