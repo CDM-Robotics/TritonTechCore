@@ -671,6 +671,18 @@ public class DriveTrain extends SubsystemBase {
         m_currentOdometry.resetPose(pose);
     }
 
+    
+    public void stopModules() {
+        SwerveModuleState[] stopStates = new SwerveModuleState[] {
+        new SwerveModuleState(0.0, m_frontLeft.getState().angle),
+        new SwerveModuleState(0.0, m_frontRight.getState().angle),
+        new SwerveModuleState(0.0, m_rearLeft.getState().angle),
+        new SwerveModuleState(0.0, m_rearRight.getState().angle)
+        };
+
+        setModuleStates(stopStates);
+    }
+
     public CommandXboxController getDefaultDriveController(int port, double bumperFactor, double triggerFactor) {
         CommandXboxController driver = new CommandXboxController(port);
 
