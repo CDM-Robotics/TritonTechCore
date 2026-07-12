@@ -3,6 +3,7 @@ package org.tritontech.core;
 import java.util.Optional;
 
 import org.photonvision.EstimatedRobotPose;
+import org.littletonrobotics.junction.Logger;
 
 /*
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -540,18 +541,40 @@ public class DriveTrain extends SubsystemBase {
     }
 
     public void followTrajectory(SwerveSample sample) {
+        // Log the trajectory inputs for troubleshooting
+        Logger.recordOutput("Choreo/SampleX", sample.x);
+        Logger.recordOutput("Choreo/SampleY", sample.y);
+        Logger.recordOutput("Choreo/SampleHeading", sample.heading);
+
         // Get the current pose of the robot
         Pose2d pose = getPose();
 
-        // 1. Sum up the Field-Relative velocities
-        double targetFieldVx = sample.vx + xController.calculate(pose.getX(), sample.x);
-        double targetFieldVy = sample.vy + yController.calculate(pose.getY(), sample.y);
+        // Log the current position/heading for troubleshooting
+        Logger.recordOutput("Drive/PoseX", pose.getX());
+        Logger.recordOutput("Drive/PoseY", pose.getY());
+        Logger.recordOutput("Drive/PoseHeading", pose.getRotation().getRadians());
+        Logger.recordOutput("PID/XError", sample.x - pose.getX());
+        Logger.recordOutput("PID/YError", sample.y - pose.getY());
+        Logger.recordOutput("PID/HeadingError",
+            MathUtil.angleModulus(sample.heading - pose.getRotation().getRadians())
+        );
 
-        // Use the PID controller correctly (SetPoint vs Measurement)
-        double targetOmega = sample.omega + m_headingController.calculate(
+        // 1. Sum up the Field-Relative velocities
+        double xPid = xController.calculate(pose.getX(), sample.x);
+        double yPid = yController.calculate(pose.getY(), sample.y);
+        double omegaPid = m_headingController.calculate(
             pose.getRotation().getRadians(),
             sample.heading
         );
+
+        // Log the calculated PID values
+        Logger.recordOutput("PID/XOutput", xPid);
+        Logger.recordOutput("PID/YOutput", yPid);
+        Logger.recordOutput("PID/OmegaOutput", omegaPid);
+
+        double targetFieldVx = sample.vx + xPid;
+        double targetFieldVy = sample.vy + yPid;
+        double targetOmega = sample.omega + omegaPid;
 
         // 2. CONVERT Field-Relative TO Robot-Relative
         ChassisSpeeds robotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
@@ -561,6 +584,11 @@ public class DriveTrain extends SubsystemBase {
         //    sample.getPose().getRotation()
             pose.getRotation() // Crucial: use the current robot heading
         );
+
+        // Log what we're sending to the modules
+        Logger.recordOutput("Drive/RobotRelativeVx", robotRelativeSpeeds.vxMetersPerSecond);
+        Logger.recordOutput("Drive/RobotRelativeVy", robotRelativeSpeeds.vyMetersPerSecond);
+        Logger.recordOutput("Drive/RobotRelativeOmega", robotRelativeSpeeds.omegaRadiansPerSecond);
 
         // 3. Pass the ROBOT-RELATIVE speeds to your builder
         driveAutoBuilder(robotRelativeSpeeds);
@@ -705,9 +733,12 @@ public class DriveTrain extends SubsystemBase {
     public Command buildTrajectory(String trajectory, PIDController headingController, boolean resetPose) {
         Command resetCmd = null;
         m_headingController = headingController;
+        m_headingController.enableContinuousInput(-Math.PI, Math.PI);
         m_headingController.reset();
         autoFactory.resetOdometry(trajectory);
         headingController.reset();
+        xController.reset();
+        yController.reset();
 
         if(resetPose) {
             resetCmd = autoFactory.resetOdometry(trajectory);
