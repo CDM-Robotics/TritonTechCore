@@ -28,16 +28,20 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Increment PATCH version
+      - name: Increment MINOR version
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           # Read current version from build.gradle
           CURRENT_VERSION=$(grep '^version = ' build.gradle | sed "s/version = '//;s/'//")
           # Split into MAJOR.MINOR.PATCH
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-          # Increment PATCH
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          # Increment MINOR and reset PATCH. MINOR is CI-owned: it only ever
+          # moves here, so X.Y.0 always corresponds to a commit on main.
+          # PATCH is owned by local `./gradlew bumpPatchVersion` runs between
+          # syncs (see build.gradle), so a non-zero PATCH means "N local-only
+          # publishes since the last time this machine synced with main."
+          NEW_MINOR=$((MINOR + 1))
+          NEW_VERSION="$MAJOR.$NEW_MINOR.0"
           # Update build.gradle
           sed -i "s/version = '$CURRENT_VERSION'/version = '$NEW_VERSION'/" build.gradle
           # Generate TritonTechCore.json (but don't commit it)

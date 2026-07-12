@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'org.tritontech'
-version = '1.0.30'
+version = '1.0.32'
 sourceCompatibility = '17'
 targetCompatibility = '17'
 
@@ -72,15 +72,6 @@ dependencies {
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-import groovy.json.JsonSlurper
-
-def vendordepsDir = file('vendordeps')
-def vendorJsons = vendordepsDir.listFiles()?.findAll { it.name.endsWith('.json') } ?: []
-
-vendorJsons.each { jsonFile ->
-    def json = new JsonSlurper().parse(jsonFile)
-}
-
 test {
   useJUnitPlatform()
   testLogging {
@@ -102,13 +93,42 @@ publishing {
     mavenJava(MavenPublication) {
       groupId = 'org.tritontech'
       artifactId = 'TritonTechCore'
-      version = '1.0.29'
+      // version intentionally omitted: inherits project.version so the
+      // published artifact can never drift from what generateVendorJson
+      // and version.properties report.
       from components.java
     }
   }
   repositories {
     mavenLocal()  // Local publishing for testing
   }
+}
+
+// Bumps the PATCH digit of project.version in this file. CI owns the MINOR
+// digit (bumped + reset PATCH to 0 on every push to main); this task lets you
+// bump PATCH locally, with no network required, so publishToMavenLocal always
+// produces a fresh version string and the consuming robot project actually
+// re-resolves the dependency instead of reusing a cached jar. A version of
+// X.Y.0 means "matches a commit CI has bumped on main"; X.Y.<non-zero> means
+// "N local publishes since the last sync with main" -- pull before your first
+// local bump of a session, or your local numbering can drift from main's.
+task bumpPatchVersion {
+    description 'Increments the PATCH version in build.gradle for local publishing'
+    group 'Build'
+    doLast {
+        def buildFile = file('build.gradle')
+        def text = buildFile.text
+        def matcher = (text =~ /version = '(\d+)\.(\d+)\.(\d+)'/)
+        if (!matcher.find()) {
+            throw new GradleException("Could not find a version = 'X.Y.Z' line in build.gradle")
+        }
+        def major = matcher.group(1) as int
+        def minor = matcher.group(2) as int
+        def patch = matcher.group(3) as int
+        def newVersion = "${major}.${minor}.${patch + 1}"
+        buildFile.text = text.replaceFirst(/version = '\d+\.\d+\.\d+'/, "version = '${newVersion}'")
+        println "Bumped version to ${newVersion}"
+    }
 }
 
 // Task to clear build cache
@@ -155,3 +175,14 @@ task generateVendorJson {
 // Make publishToMavenLocal depend on generateVendorJson
 publishToMavenLocal.dependsOn generateVendorJson
 build.dependsOn generateVendorJson
+
+// NOTE: bumpPatchVersion is deliberately NOT wired via dependsOn into
+// publishToMavenLocal. Gradle's configuration phase (and the maven-publish
+// plugin's publication coordinates) lock in project.version before any task
+// runs, so a same-build file edit from bumpPatchVersion can't affect that
+// same build's output -- it would only take effect on the *next* invocation,
+// meaning this build still republishes under the old, already-used version.
+// Run them as two separate commands instead, so the second one's
+// configuration phase reads the freshly-bumped version off disk:
+//   ./gradlew bumpPatchVersion
+//   ./gradlew publishToMavenLocal
