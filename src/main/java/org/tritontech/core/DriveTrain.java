@@ -196,11 +196,14 @@ public class DriveTrain extends SubsystemBase {
         m_nearestTargetPose = null;
         isLiveUpdatedOdometry = false;
 
+        // TODO: If red-alliance auto behaves badly (robot drives to the wrong side of the
+        // field, etc.) and you can't reach support to debug it, flip this back to `false`.
+        // That was the prior known-working fallback (blue-only, unflipped trajectories).
         autoFactory = new AutoFactory(
             this::getPose, // A function that returns the current robot pose
             this::resetOdometry, // A function that resets the current robot pose to the provided Pose2d
-            this::followTrajectory, // The drive subsystem trajectory follower 
-            false, // If alliance flipping should be enabled 
+            this::followTrajectory, // The drive subsystem trajectory follower
+            true, // If alliance flipping should be enabled
             this
         );
     }
