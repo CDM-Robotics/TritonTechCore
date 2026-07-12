@@ -276,9 +276,9 @@ public class DriveTrain extends SubsystemBase {
                     System.err.println("#### WARNING:  You need to set the vision constants after instantiation. ####");
                     m_visionConstantsReported = true;
                 }
-            }
 
-            return;
+                return;
+            }
         }
 
         if (rateLimit) {
@@ -397,9 +397,10 @@ public class DriveTrain extends SubsystemBase {
 
     public void resetOdometry(Pose2d pose) {
         SwerveModulePosition[] swervePos = getModulePositions();
-        double ang = getAngle();
 
         setHeading(pose.getRotation().getDegrees());
+        double ang = getAngle();
+
         m_currentOdometry.resetPosition(
                 Rotation2d.fromDegrees(ang),
                 swervePos,
