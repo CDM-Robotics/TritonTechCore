@@ -10,39 +10,39 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController; */
-import com.studica.frc.AHRS;
-import com.studica.frc.AHRS.NavXComType;
 
 import choreo.auto.AutoFactory;
 import choreo.util.ChoreoAllianceFlipUtil;
 import choreo.trajectory.SwerveSample;
-import edu.wpi.first.apriltag.AprilTag;
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.util.WPIUtilJNI;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import org.wpilib.fields.FieldTag;
+import org.wpilib.fields.Field;
+import org.wpilib.math.util.MathUtil;
+import org.wpilib.math.linalg.Matrix;
+import org.wpilib.math.linalg.VecBuilder;
+import org.wpilib.math.controller.PIDController;
+import org.wpilib.math.estimator.SwerveDrivePoseEstimator;
+import org.wpilib.math.filter.SlewRateLimiter;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Pose3d;
+import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.math.kinematics.ChassisVelocities;
+import org.wpilib.math.kinematics.SwerveDriveKinematics;
+import org.wpilib.math.kinematics.SwerveModulePosition;
+import org.wpilib.math.kinematics.SwerveModuleVelocity;
+import org.wpilib.math.numbers.N1;
+import org.wpilib.math.numbers.N3;
+import org.wpilib.math.util.Units;
+import org.wpilib.util.WPIUtilJNI;
+import org.wpilib.driverstation.DriverStation;
+import org.wpilib.hardware.imu.OnboardIMU;
+import org.wpilib.hardware.imu.OnboardIMU.MountOrientation;
+import org.wpilib.smartdashboard.Field2d;
+import org.wpilib.telemetry.Telemetry;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.InstantCommand;
+import org.wpilib.command2.SubsystemBase;
+import org.wpilib.command2.button.CommandXboxController;
 
 public class DriveTrain extends SubsystemBase {
 
@@ -74,7 +74,7 @@ public class DriveTrain extends SubsystemBase {
     private boolean m_chassisConstantsInitialized;
     private boolean m_chassisConstantsReported;
 
-    private AprilTagFieldLayout m_kTagLayout;
+    private Field m_kTagLayout;
     private double m_distanceCorrection;
 
     private boolean m_visionConstantsInitialized;
@@ -82,7 +82,7 @@ public class DriveTrain extends SubsystemBase {
 
     private boolean isLiveUpdatedOdometry;
 
-    private ChassisSpeeds targetChassisSpeeds = new ChassisSpeeds();
+    private ChassisVelocities targetChassisSpeeds = new ChassisVelocities();
 
     // Choreo parameters
     private final PIDController xController = new PIDController(2.0, 0.0, 0.0);
@@ -90,8 +90,8 @@ public class DriveTrain extends SubsystemBase {
     private PIDController m_headingController;
     private final AutoFactory autoFactory;
 
-    // private final Pigeon2 m_gyro = new Pigeon2(19,"rio");
-    private final AHRS m_gyro2 = new AHRS(NavXComType.kMXP_SPI);
+    // SystemCore's built-in IMU (replaces the NavX, which needed the roboRIO MXP port)
+    private final OnboardIMU m_gyro;
     private double m_angleOffset;
     private double engineerThrottle;
     private double driverThrottle;
@@ -143,7 +143,26 @@ public class DriveTrain extends SubsystemBase {
             SlewRateLimiter rotLimiter,
             Vision p_Vision,
             SwerveSample s) {
+        this(frontLeft, frontRight, rearLeft, rearRight, driveKinematics, magLimiter, rotLimiter, p_Vision, s,
+                MountOrientation.FLAT);
+    }
 
+    /**
+     * @param imuMountOrientation how the SystemCore is mounted on the robot, which
+     *                            determines which IMU axis is used as yaw.
+     */
+    public DriveTrain(SwerveModule frontLeft,
+            SwerveModule frontRight,
+            SwerveModule rearLeft,
+            SwerveModule rearRight,
+            SwerveDriveKinematics driveKinematics,
+            SlewRateLimiter magLimiter,
+            SlewRateLimiter rotLimiter,
+            Vision p_Vision,
+            SwerveSample s,
+            MountOrientation imuMountOrientation) {
+
+        m_gyro = new OnboardIMU(imuMountOrientation);
         m_driveConstantsInitialized = false;
         m_driveConstantsReported = false;
         m_chassisConstantsInitialized = false;
@@ -213,9 +232,8 @@ public class DriveTrain extends SubsystemBase {
     }
 
     public void zeroHeading() {
-        // m_gyro.reset();
         m_angleOffset = 0;
-        m_gyro2.reset();
+        m_gyro.resetYaw();
         System.out.println("MRAP engaged and Driving re-zero complete"); // Match Restart Alignment Protocol (MRAP)
     }
 
@@ -232,7 +250,7 @@ public class DriveTrain extends SubsystemBase {
         m_driveConstantsInitialized = true;
     }
 
-    public void setVisionConstants(AprilTagFieldLayout kTagLayout, double distanceCorrection) {
+    public void setVisionConstants(Field kTagLayout, double distanceCorrection) {
         m_kTagLayout = kTagLayout;
         m_distanceCorrection = distanceCorrection;
         m_visionConstantsInitialized = true;
@@ -336,16 +354,18 @@ public class DriveTrain extends SubsystemBase {
         double ySpeedDelivered = ySpeedCommanded * m_maxSpeedMPS;
         double rotDelivered = m_currentRotation * m_maxAngularSpeed;
 
-        var swerveModuleStates = m_driveKinematics.toSwerveModuleStates(
+        var commanded = new ChassisVelocities(xSpeedDelivered, ySpeedDelivered, rotDelivered);
+        var swerveModuleStates = m_driveKinematics.toSwerveModuleVelocities(
                 fieldRelative
-                        ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered,
-                                Rotation2d.fromDegrees(getAngle()))
-                        : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
+                        ? commanded.toRobotRelative(Rotation2d.fromDegrees(getAngle()))
+                        : commanded);
         setModuleStates(swerveModuleStates);
     }
 
     public double getAngle() {
-        return Math.toDegrees(MathUtil.angleModulus(-Rotation2d.fromDegrees(m_gyro2.getAngle()).getRadians()))
+        // OnboardIMU yaw is CCW-positive (WPILib convention), unlike the NavX's CW-positive
+        // getAngle(), so no negation is needed here.
+        return Math.toDegrees(MathUtil.angleModulus(m_gyro.getYawRadians()))
                 + m_angleOffset;
     }
 
@@ -366,17 +386,18 @@ public class DriveTrain extends SubsystemBase {
      * }
      */
 
-    public void setModuleStates(SwerveModuleState[] desiredStates) {
-        SwerveDriveKinematics.desaturateWheelSpeeds(
-                desiredStates, m_maxSpeedMPS);
+    public void setModuleStates(SwerveModuleVelocity[] requestedStates) {
+        // desaturateWheelVelocities returns a new array (2026's desaturateWheelSpeeds mutated in place)
+        SwerveModuleVelocity[] desiredStates = SwerveDriveKinematics.desaturateWheelVelocities(
+                requestedStates, m_maxSpeedMPS);
         m_frontLeft.setDesiredState(desiredStates[0]);
         m_frontRight.setDesiredState(desiredStates[1]);
         m_rearLeft.setDesiredState(desiredStates[2]);
         m_rearRight.setDesiredState(desiredStates[3]);
     }
 
-    public SwerveModuleState[] getModuleStates() {
-        SwerveModuleState[] states = new SwerveModuleState[SwerveModules.length];
+    public SwerveModuleVelocity[] getModuleStates() {
+        SwerveModuleVelocity[] states = new SwerveModuleVelocity[SwerveModules.length];
         for (int i = 0; i < SwerveModules.length; i++) {
             states[i] = SwerveModules[i].getState();
         }
@@ -388,13 +409,13 @@ public class DriveTrain extends SubsystemBase {
         Pose2d p_decompPose = m_currentOdometry.getEstimatedPosition();
         Pose2d p_Pose2d = new Pose2d(p_decompPose.getX(), p_decompPose.getY(), p_decompPose.getRotation());
 
-        SmartDashboard.putNumber("Current Odometry Pose", p_decompPose.getRotation().getDegrees());
+        Telemetry.log("Current Odometry Pose", p_decompPose.getRotation().getDegrees());
 
         return p_Pose2d;
     }
 
     public void setHeading(double p_DegAngle) {
-        m_gyro2.reset();
+        m_gyro.resetYaw();
         m_angleOffset = p_DegAngle;
     }
 
@@ -462,13 +483,13 @@ public class DriveTrain extends SubsystemBase {
         m_measuredOdometry.update(
                 Rotation2d.fromDegrees(ang),
                 swervePos);
-        SmartDashboard.putNumber("X", Units.metersToInches(getPose().getX()));
-        SmartDashboard.putNumber("Y", Units.metersToInches(getPose().getY()));
-        SmartDashboard.putNumber("Angle", getAngle());
+        Telemetry.log("X", Units.metersToInches(getPose().getX()));
+        Telemetry.log("Y", Units.metersToInches(getPose().getY()));
+        Telemetry.log("Angle", getAngle());
 
         if(visionEst.isPresent()) {
             m_Vision.getTargetingYaw();
-            SmartDashboard.putBoolean("DEBUG Vision Estimate Present", visionEst.isPresent());
+            Telemetry.log("DEBUG Vision Estimate Present", visionEst.isPresent());
         }
 
         visionEst.ifPresent(
@@ -478,22 +499,22 @@ public class DriveTrain extends SubsystemBase {
                     var estStdDevs = m_Vision.getEstimationStdDevs();
 
                     est.estimatedPose.toPose2d().toString();
-                    SmartDashboard.putNumber("Est Targets Used (first)", est.targetsUsed.get(0).fiducialId);
-                    SmartDashboard.putNumber("Vision Estimate Pose2d (X)", estPose.getX());
-                    SmartDashboard.putNumber("Vision Estimate Pose2d (Y)", estPose.getY());
+                    Telemetry.log("Est Targets Used (first)", est.targetsUsed.get(0).fiducialId);
+                    Telemetry.log("Vision Estimate Pose2d (X)", estPose.getX());
+                    Telemetry.log("Vision Estimate Pose2d (Y)", estPose.getY());
                     addVisionMeasurement(
                             est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
 
                     m_nearestTarget = getNearestTargetID();
-                    SmartDashboard.putNumber(("Nearest Target ID"), m_nearestTarget);
+                    Telemetry.log(("Nearest Target ID"), m_nearestTarget);
                     Optional<Pose3d> nearestPose3d = m_kTagLayout.getTagPose(m_nearestTarget);
                     m_nearestTargetPose = nearestPose3d;
                     if (nearestPose3d.isPresent()) {
                         double d = 0.0;
                         Translation2d t2d = new Translation2d(nearestPose3d.get().getX(), nearestPose3d.get().getY());
                         d = t2d.minus(getPose().getTranslation()).getNorm() + m_distanceCorrection;
-                        SmartDashboard.putNumber("Nearest Target Distance", d);
-                        SmartDashboard.putNumber("Nearest Target Distance(in)", Units.metersToInches(d));
+                        Telemetry.log("Nearest Target Distance", d);
+                        Telemetry.log("Nearest Target Distance(in)", Units.metersToInches(d));
                     }
 
                 });
@@ -526,17 +547,17 @@ public class DriveTrain extends SubsystemBase {
         double minDistance = 0.0;
         double currDistance = 0.0;
 
-        for (AprilTag tag : m_kTagLayout.getTags()) {
+        for (FieldTag tag : m_kTagLayout.getTags()) {
             if (minDistance == 0.0) {
-                tagID = tag.ID;
+                tagID = tag.getID();
                 minDistance = m_currentOdometry.getEstimatedPosition().getTranslation()
-                        .getDistance(tag.pose.toPose2d().getTranslation());
+                        .getDistance(tag.getPose().toPose2d().getTranslation());
             } else {
                 currDistance = m_currentOdometry.getEstimatedPosition().getTranslation()
-                        .getDistance(tag.pose.toPose2d().getTranslation());
+                        .getDistance(tag.getPose().toPose2d().getTranslation());
                 if (minDistance > currDistance) {
                     minDistance = currDistance;
-                    tagID = tag.ID;
+                    tagID = tag.getID();
                 }
             }
         }
@@ -581,18 +602,16 @@ public class DriveTrain extends SubsystemBase {
         double targetOmega = sample.omega + omegaPid;
 
         // 2. CONVERT Field-Relative TO Robot-Relative
-        ChassisSpeeds robotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+        ChassisVelocities robotRelativeSpeeds = new ChassisVelocities(
             targetFieldVx,
             targetFieldVy,
-            targetOmega,
-        //    sample.getPose().getRotation()
-            pose.getRotation() // Crucial: use the current robot heading
-        );
+            targetOmega
+        ).toRobotRelative(pose.getRotation()); // Crucial: use the current robot heading
 
         // Log what we're sending to the modules
-        Logger.recordOutput("Drive/RobotRelativeVx", robotRelativeSpeeds.vxMetersPerSecond);
-        Logger.recordOutput("Drive/RobotRelativeVy", robotRelativeSpeeds.vyMetersPerSecond);
-        Logger.recordOutput("Drive/RobotRelativeOmega", robotRelativeSpeeds.omegaRadiansPerSecond);
+        Logger.recordOutput("Drive/RobotRelativeVx", robotRelativeSpeeds.vx);
+        Logger.recordOutput("Drive/RobotRelativeVy", robotRelativeSpeeds.vy);
+        Logger.recordOutput("Drive/RobotRelativeOmega", robotRelativeSpeeds.omega);
 
         // 3. Pass the ROBOT-RELATIVE speeds to your builder
         driveAutoBuilder(robotRelativeSpeeds);
@@ -601,7 +620,7 @@ public class DriveTrain extends SubsystemBase {
 
         double headingError = MathUtil.angleModulus(sample.heading - pose.getRotation().getRadians());
 
-        ChassisSpeeds speeds = new ChassisSpeeds(
+        ChassisVelocities speeds = new ChassisVelocities(
             sample.vx + xController.calculate(pose.getX(), sample.x),
             sample.vy + yController.calculate(pose.getY(), sample.y),
             sample.omega + m_headingController.calculate(0.0, headingError)
@@ -610,18 +629,15 @@ public class DriveTrain extends SubsystemBase {
         driveAutoBuilder(speeds); */
     }
 
-    public void driveAutoBuilder(ChassisSpeeds p_ChassisSpeed) {
-        // ChassisSpeeds targetSpeeds = ChassisSpeeds.discretize(p_ChassisSpeed, 0.02);
-
-        ChassisSpeeds targetSpeeds = ChassisSpeeds.discretize(new ChassisSpeeds(p_ChassisSpeed.vxMetersPerSecond,
-                p_ChassisSpeed.vyMetersPerSecond, p_ChassisSpeed.omegaRadiansPerSecond), 0.02);
-        SwerveModuleState[] targetStates = m_driveKinematics.toSwerveModuleStates(targetSpeeds);
+    public void driveAutoBuilder(ChassisVelocities p_ChassisSpeed) {
+        ChassisVelocities targetSpeeds = p_ChassisSpeed.discretize(0.02);
+        SwerveModuleVelocity[] targetStates = m_driveKinematics.toSwerveModuleVelocities(targetSpeeds);
 
         setModuleStates(targetStates);
     }
 
-    public ChassisSpeeds getChassisSpeed() {
-        return m_driveKinematics.toChassisSpeeds(getModuleStates());
+    public ChassisVelocities getChassisSpeed() {
+        return m_driveKinematics.toChassisVelocities(getModuleStates());
     }
 
     public void setEngineerThrottle(double t) {
@@ -691,7 +707,7 @@ public class DriveTrain extends SubsystemBase {
     }
 
     public void setAutoApproach(boolean approach) {
-        SmartDashboard.putBoolean("Auto Approach", approach);
+        Telemetry.log("Auto Approach", approach);
         autoApproach = approach;
     }
 
@@ -705,11 +721,11 @@ public class DriveTrain extends SubsystemBase {
 
     
     public void stopModules() {
-        SwerveModuleState[] stopStates = new SwerveModuleState[] {
-        new SwerveModuleState(0.0, m_frontLeft.getState().angle),
-        new SwerveModuleState(0.0, m_frontRight.getState().angle),
-        new SwerveModuleState(0.0, m_rearLeft.getState().angle),
-        new SwerveModuleState(0.0, m_rearRight.getState().angle)
+        SwerveModuleVelocity[] stopStates = new SwerveModuleVelocity[] {
+        new SwerveModuleVelocity(0.0, m_frontLeft.getState().angle),
+        new SwerveModuleVelocity(0.0, m_frontRight.getState().angle),
+        new SwerveModuleVelocity(0.0, m_rearLeft.getState().angle),
+        new SwerveModuleVelocity(0.0, m_rearRight.getState().angle)
         };
 
         setModuleStates(stopStates);
@@ -718,12 +734,12 @@ public class DriveTrain extends SubsystemBase {
     public CommandXboxController getDefaultDriveController(int port, double bumperFactor, double triggerFactor) {
         CommandXboxController driver = new CommandXboxController(port);
 
-        driver.back().onTrue(new InstantCommand(() -> this.resetThrottle()));
+        driver.view().onTrue(new InstantCommand(() -> this.resetThrottle()));
         driver.rightBumper().onTrue(new InstantCommand(() -> this.setDriverThrottle(bumperFactor)));
         driver.rightBumper().onFalse(new InstantCommand(() -> this.setDriverThrottle(1.0)));
         driver.rightTrigger().onTrue(new InstantCommand(() -> this.setDriverThrottle(triggerFactor)));
         driver.rightTrigger().onFalse(new InstantCommand(() -> this.setDriverThrottle(1.0)));
-        driver.start().onTrue(new InstantCommand(() -> this.zeroHeading()));
+        driver.menu().onTrue(new InstantCommand(() -> this.zeroHeading()));
 
         this.setDefaultCommand(new DriveCmd(this, driver));
 
@@ -739,7 +755,6 @@ public class DriveTrain extends SubsystemBase {
         m_headingController = headingController;
         m_headingController.enableContinuousInput(-Math.PI, Math.PI);
         m_headingController.reset();
-        autoFactory.resetOdometry(trajectory);
         headingController.reset();
         xController.reset();
         yController.reset();

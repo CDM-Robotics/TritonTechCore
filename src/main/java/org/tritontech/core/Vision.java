@@ -1,28 +1,24 @@
 package org.tritontech.core;
 
-import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.math.util.Units;
+import org.wpilib.math.linalg.VecBuilder;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.math.geometry.Transform3d;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.math.numbers.N1;
+import org.wpilib.math.numbers.N3;
+import org.wpilib.telemetry.Telemetry;
+import org.wpilib.command2.SubsystemBase;
+import org.wpilib.fields.Field;
+import org.wpilib.math.linalg.Matrix;
+import org.wpilib.math.util.Units;
 
-import java.lang.annotation.Target;
 import java.util.List;
 import java.util.Optional;
 
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
-import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 import org.photonvision.PhotonUtils;
@@ -46,7 +42,7 @@ public class Vision extends SubsystemBase {
     private double m_kCameraZOffset;
     private double m_kPitchOffset;
 
-    public Vision(String cameraName, AprilTagFieldLayout kTagLayout, Transform3d kRobotToCam, double kCameraZOffset,
+    public Vision(String cameraName, Field kTagLayout, Transform3d kRobotToCam, double kCameraZOffset,
             double kPitchOffset) {
         m_kCameraZOffset = kCameraZOffset;
         m_kPitchOffset = kPitchOffset;
@@ -54,14 +50,11 @@ public class Vision extends SubsystemBase {
         camera = new PhotonCamera(cameraName);
         // auxCamera = new PhotonCamera(VisionConstants.kAuxPhoton);
 
-        photonEstimator = new PhotonPoseEstimator(kTagLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, kRobotToCam);
+        photonEstimator = new PhotonPoseEstimator(kTagLayout, kRobotToCam);
 
         // auxPhotonEstimator =
         // new PhotonPoseEstimator(VisionConstants.kTagLayout,
         // PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, VisionConstants.kAuxRobotToCam);
-
-        photonEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
-        // auxPhotonEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
 
         // The default standard deviations of our vision estimated poses, which affect
         // correction rate
@@ -87,11 +80,15 @@ public class Vision extends SubsystemBase {
         int i = 0;
         for (var change : camera.getAllUnreadResults()) {
             i++;
-            visionEst = photonEstimator.update(change);
+            // Multi-tag PnP on the coprocessor, falling back to lowest ambiguity when only one tag is seen
+            visionEst = photonEstimator.estimateCoprocMultiTagPose(change);
+            if (visionEst.isEmpty()) {
+                visionEst = photonEstimator.estimateLowestAmbiguityPose(change);
+            }
             updateEstimationStdDevs(visionEst, change.getTargets());
         }
 
-        SmartDashboard.putNumber("Unreadresults", i);
+        Telemetry.log("Unreadresults", i);
 
         // Aux Camera Estimator
         /*
@@ -113,7 +110,7 @@ public class Vision extends SubsystemBase {
             curStdDevs = m_kSingleTagStdDevs;
 
         } else {
-            SmartDashboard.putString("Std Devs", "STD DEV Found!!!");
+            Telemetry.log("Std Devs", "STD DEV Found!!!");
             // Pose present. Start running Heuristic
             var estStdDevs = m_kSingleTagStdDevs;
             int numTags = 0;
@@ -178,12 +175,12 @@ public class Vision extends SubsystemBase {
 
             for (PhotonTrackedTarget target : getLatestResult().getTargets()) {
                 targetYaw = target.getYaw();
-                // SmartDashboard.putNumber("Target Yaw (" + target.getFiducialId() + ")",
+                // Telemetry.log("Target Yaw (" + target.getFiducialId() + ")",
                 // target.getYaw());
                 targetDistance = PhotonUtils.calculateDistanceToTargetMeters(
                         Units.inchesToMeters(m_kCameraZOffset), Units.inchesToMeters(8.75 + 6.5 / 2),
                         -m_kPitchOffset, target.pitch);
-                // SmartDashboard.putNumber("Target Distance (" + target.getFiducialId() + ")",
+                // Telemetry.log("Target Distance (" + target.getFiducialId() + ")",
                 // targetDistance);
             }
         }

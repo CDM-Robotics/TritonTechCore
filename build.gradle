@@ -1,23 +1,26 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2026.1.1"
+    id "org.wpilib.GradleRIO" version "2027.0.0-alpha-7"
     id 'maven-publish'
 }
 
 group = 'org.tritontech'
 version = '1.0.32'
-sourceCompatibility = '17'
-targetCompatibility = '17'
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
 
-def versionFile = file("$buildDir/resources/main/org/tritontech/core/version.properties")
+def versionFile = layout.buildDirectory.file("resources/main/org/tritontech/core/version.properties").get().asFile
 
 task generateVersionProperties {
-    description 'Generates version.properties with the project version'
-    group 'Build'
+    description = 'Generates version.properties with the project version'
+    group = 'Build'
+    def libVersion = project.version
     outputs.file versionFile
     doLast {
         versionFile.parentFile.mkdirs()
-        versionFile.text = "version=${project.version}"
+        versionFile.text = "version=${libVersion}"
     }
 }
 
@@ -25,43 +28,12 @@ processResources.dependsOn generateVersionProperties
 
 repositories {
   mavenCentral()
-//  maven { url 'https://frcmaven.wpi.edu/artifactory/release' }
-//  maven { url 'https://frcmaven.wpi.edu/artifactory/development' }
-//  maven { url 'https://maven.revrobotics.com/' }  // REV Robotics Maven repo
-//  maven { url 'https://dev.studica.com/maven/release/2026/' }  // Studica Maven repo
-//  maven { url 'https://frcmaven.wpi.edu/artifactory/sleipnirgroup-mvn-release/'}
-//  maven { url 'https://repo1.maven.org/maven2'}
-  //  maven { url 'https://3015rangerrobotics.github.io/pathplannerlib/repo' }  // PathplannerLib Maven repo
 }
 
 dependencies {
   annotationProcessor wpi.java.deps.wpilibAnnotations()
   implementation wpi.java.deps.wpilib()
   implementation wpi.java.vendor.java()
-
-  // WPILib Java dependencies
-//  implementation 'edu.wpi.first.wpilibj:wpilibj-java:2026.1.1'  // Pinned to 2026.1.1
-//  implementation 'edu.wpi.first.wpiutil:wpiutil-java:2026.1.1'
-//  implementation 'edu.wpi.first.wpimath:wpimath-java:2026.1.1'
-//  implementation 'edu.wpi.first.wpiunits:wpiunits-java:2026.1.1'
-//  implementation 'edu.wpi.first.ntcore:ntcore-java:2026.1.1'
-//  implementation 'edu.wpi.first.cscore:cscore-java:2026.1.1'
-//  implementation 'edu.wpi.first.cameraserver:cameraserver-java:2026.1.1'
-//  implementation 'edu.wpi.first.hal:hal-java:2026.1.1'
-//  implementation 'edu.wpi.first.thirdparty.frc2025.opencv:opencv-java:4.10.0-3'
-
-  // REV Robotics dependency
-  //implementation 'com.revrobotics.frc:REVLib-java:2026.0.1'
-
-  // Studica dependency
-  //implementation 'com.studica.frc:Studica-java:2026.0.0'
-
-  // PathplannerLib dependency
-  //implementation 'com.pathplanner.lib:PathplannerLib-java:2025.2.7'
-
-  // ChoreoLib dependency
-  //implementation 'com.google.code.gson:gson:2.11.0'
-  //implementation 'choreo:ChoreoLib-java:2026.0.1'
 
   // Optional dependencies
   implementation 'org.ejml:ejml-simple:0.43.1'
@@ -76,15 +48,13 @@ test {
   useJUnitPlatform()
   testLogging {
     events 'failed'
-    exceptionFormat 'full'
+    exceptionFormat = 'full'
   }
 }
 
 javadoc {
   options {
-    links 'https://docs.oracle.com/en/java/javase/17/docs/api/',
-          'https://github.javadoc.io/allwpilib/docs/release/java/', 
-          'https://codedocs.revrobotics.com/'
+    links 'https://docs.oracle.com/en/java/javase/25/docs/api/'
   }
 }
 
@@ -113,10 +83,10 @@ publishing {
 // "N local publishes since the last sync with main" -- pull before your first
 // local bump of a session, or your local numbering can drift from main's.
 task bumpPatchVersion {
-    description 'Increments the PATCH version in build.gradle for local publishing'
-    group 'Build'
+    description = 'Increments the PATCH version in build.gradle for local publishing'
+    group = 'Build'
+    def buildFile = file('build.gradle')
     doLast {
-        def buildFile = file('build.gradle')
         def text = buildFile.text
         def matcher = (text =~ /version = '(\d+)\.(\d+)\.(\d+)'/)
         if (!matcher.find()) {
@@ -133,39 +103,43 @@ task bumpPatchVersion {
 
 // Task to clear build cache
 task clearBuildCache(type: Delete) {
-    description 'Clears the build cache to force dependency re-resolution'
-    group 'Build'
+    description = 'Clears the build cache to force dependency re-resolution'
+    group = 'Build'
     delete fileTree(dir: 'build/tmp/.cache')
 }
 
 // Task to generate TritonTechCore.json with dynamic user name and version
 import groovy.json.JsonOutput
 task generateVendorJson {
-    description 'Generates TritonTechCore.json with dynamic user name and project version'
-    group 'WPILib'
+    description = 'Generates TritonTechCore.json with dynamic user name and project version'
+    group = 'WPILib'
+
+    // Resolved at configuration time: touching `project` inside doLast is deprecated in Gradle 9
+    def libVersion = project.version
+    def vendorJsonFile = file('TritonTechCore.json')
 
     doLast {
         def userName = System.getProperty('user.name')
         def json = [
             fileName: 'TritonTechCore.json',
             name: 'TritonTechCore',
-            version: project.version,
+            version: libVersion,
             uuid: 'a121b32c-1adf-484c-bb57-0d959dbbe62f',
-            frcYear: '2026',
+            wpilibYear: '2027_alpha7',
             mavenUrls: ["file:///C:/Users/${userName}/.m2/repository/"],
             jsonUrl: "file:///C:/Users/${userName}/TritonTechCore/TritonTechCore.json",
             javaDependencies: [
                 [
                     groupId: 'org.tritontech',
                     artifactId: 'TritonTechCore',
-                    version: project.version
+                    version: libVersion
                 ]
             ],
             jniDependencies: [],
             cppDependencies: []
         ]
         def jsonString = JsonOutput.prettyPrint(JsonOutput.toJson(json))
-        file('TritonTechCore.json').text = jsonString
+        vendorJsonFile.text = jsonString
     }
 }
 

@@ -1,9 +1,9 @@
 package org.tritontech.core;
 
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import org.wpilib.math.util.MathUtil;
+import org.wpilib.telemetry.Telemetry;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.button.CommandXboxController;
 
 public class DriveCmd extends Command {
 
@@ -33,8 +33,8 @@ public class DriveCmd extends Command {
     @Override
     public void execute() {
         double throttle = Math.min(m_driveTrain.getEngineerThrottle(), m_driveTrain.getDriverThrottle());
-        SmartDashboard.putNumber("Drive Throttle", m_driveTrain.getDriverThrottle());
-        SmartDashboard.putNumber("Engineer Throttle", m_driveTrain.getEngineerThrottle());
+        Telemetry.log("Drive Throttle", m_driveTrain.getDriverThrottle());
+        Telemetry.log("Engineer Throttle", m_driveTrain.getEngineerThrottle());
 
         var ySpeed = MathUtil.applyDeadband(-m_controller.getLeftX(), deadzone) * sideMod;
 

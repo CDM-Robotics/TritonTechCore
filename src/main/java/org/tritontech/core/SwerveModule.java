@@ -15,12 +15,13 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
 
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import org.wpilib.hardware.bus.CANPort;
+import org.wpilib.math.controller.SimpleMotorFeedforward;
+import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.math.kinematics.SwerveModulePosition;
+import org.wpilib.math.kinematics.SwerveModuleVelocity;
+import org.wpilib.math.util.Units;
+import org.wpilib.telemetry.Telemetry;
 
 public class SwerveModule {
 
@@ -43,7 +44,7 @@ public class SwerveModule {
   private String m_moduleChannel;// module channel is for telemetry
 
   private double m_chassisAngularOffset = 0;
-  private SwerveModuleState m_desiredState = new SwerveModuleState(0.0, new Rotation2d());
+  private SwerveModuleVelocity m_desiredState = new SwerveModuleVelocity(0.0, new Rotation2d());
 
 
   /**
@@ -52,7 +53,8 @@ public class SwerveModule {
    * MAXSwerve Module built with NEOs, SPARKS MAX, and a Through Bore
    * Encoder.
    */
-  public SwerveModule(int drivingCANId,
+  public SwerveModule(CANPort canBus,
+      int drivingCANId,
       MotorControllerType drivingSparkType,
       MotorControllerType turningSparkType,
       int turningCANId,
@@ -61,8 +63,8 @@ public class SwerveModule {
       SparkBaseConfig drivingConfig,
       SparkBaseConfig turningConfig,
       SimpleMotorFeedforward drivingFeedForward) {
-    m_drivingSpark = MotorFactory.createMotor(drivingSparkType, drivingCANId, MotorType.kBrushless);
-    m_turningSpark = MotorFactory.createMotor(turningSparkType, turningCANId, MotorType.kBrushless);
+    m_drivingSpark = MotorFactory.createMotor(drivingSparkType, canBus, drivingCANId, MotorType.kBrushless);
+    m_turningSpark = MotorFactory.createMotor(turningSparkType, canBus, turningCANId, MotorType.kBrushless);
 
     // Setup encoders and PID controllers for the driving and turning SPARKS MAX.
     m_drivingEncoder = m_drivingSpark.getEncoder();
@@ -78,12 +80,26 @@ public class SwerveModule {
         PersistMode.kPersistParameters);
 
     m_chassisAngularOffset = chassisAngularOffset;
-    m_desiredState.angle = new Rotation2d(m_turningEncoder.getPosition());
+    m_desiredState.angle = new Rotation2d(m_turningEncoder.getPosition().get());
     m_drivingEncoder.setPosition(0);
 
     m_moduleChannel = p_moduleChannel;
 
     m_drivingFeedForward = drivingFeedForward;
+  }
+
+  /** Same as above, with both motors on {@link MotorFactory#DEFAULT_CAN_BUS}. */
+  public SwerveModule(int drivingCANId,
+      MotorControllerType drivingSparkType,
+      MotorControllerType turningSparkType,
+      int turningCANId,
+      double chassisAngularOffset,
+      String p_moduleChannel,
+      SparkBaseConfig drivingConfig,
+      SparkBaseConfig turningConfig,
+      SimpleMotorFeedforward drivingFeedForward) {
+    this(MotorFactory.DEFAULT_CAN_BUS, drivingCANId, drivingSparkType, turningSparkType, turningCANId,
+        chassisAngularOffset, p_moduleChannel, drivingConfig, turningConfig, drivingFeedForward);
   }
 
   @Deprecated
@@ -105,11 +121,11 @@ public class SwerveModule {
    *
    * @return The current state of the module.
    */
-  public SwerveModuleState getState() {
+  public SwerveModuleVelocity getState() {
     // Apply chassis angular offset to the encoder position to get the position
     // relative to the chassis.
-    return new SwerveModuleState(m_drivingEncoder.getVelocity(),
-        new Rotation2d(m_turningEncoder.getPosition() - m_chassisAngularOffset));
+    return new SwerveModuleVelocity(m_drivingEncoder.getVelocity().get(),
+        new Rotation2d(m_turningEncoder.getPosition().get() - m_chassisAngularOffset));
   }
 
   /**
@@ -121,8 +137,8 @@ public class SwerveModule {
     // Apply chassis angular offset to the encoder position to get the position
     // relative to the chassis.
     return new SwerveModulePosition(
-        m_drivingEncoder.getPosition(),
-        new Rotation2d(m_turningEncoder.getPosition() - m_chassisAngularOffset));
+        m_drivingEncoder.getPosition().get(),
+        new Rotation2d(m_turningEncoder.getPosition().get() - m_chassisAngularOffset));
   }
 
   /**
@@ -130,14 +146,14 @@ public class SwerveModule {
    *
    * @param desiredState Desired state with speed and angle.
    */
-  public void setDesiredState(SwerveModuleState desiredState) {
+  public void setDesiredState(SwerveModuleVelocity desiredState) {
     // Apply chassis angular offset to the desired state.
-    SwerveModuleState correctedDesiredState = new SwerveModuleState();
-    correctedDesiredState.speedMetersPerSecond = desiredState.speedMetersPerSecond;
-    correctedDesiredState.angle = desiredState.angle.plus(Rotation2d.fromRadians(m_chassisAngularOffset));
-
     // Optimize the reference state to avoid spinning further than 90 degrees.
-    correctedDesiredState.optimize(new Rotation2d(m_turningEncoder.getPosition()));
+    // optimize() returns a new object (2026's SwerveModuleState.optimize mutated in place).
+    SwerveModuleVelocity correctedDesiredState = new SwerveModuleVelocity(
+        desiredState.velocity,
+        desiredState.angle.plus(Rotation2d.fromRadians(m_chassisAngularOffset)))
+        .optimize(new Rotation2d(m_turningEncoder.getPosition().get()));
 
     // double AccelerationThingy = (optimizedDesiredState.speedMetersPerSecond -
     // m_previousVelocity)* ModuleConstants.kPAcceleration;
@@ -147,9 +163,9 @@ public class SwerveModule {
     // + AccelerationThingy), CANSparkMax.ControlType.kVelocity);
     // m_turningPIDController.setReference(optimizedDesiredState.angle.getRadians(),
     // CANSparkMax.ControlType.kPosition);
-    m_drivingClosedLoopController.setSetpoint((correctedDesiredState.speedMetersPerSecond),
+    m_drivingClosedLoopController.setSetpoint((correctedDesiredState.velocity),
         SparkMax.ControlType.kVelocity, ClosedLoopSlot.kSlot0,
-        m_drivingFeedForward.calculate(correctedDesiredState.speedMetersPerSecond));
+        m_drivingFeedForward.calculate(correctedDesiredState.velocity));
     
     m_turningClosedLoopController.setSetpoint(correctedDesiredState.angle.getRadians(),
         SparkMax.ControlType.kPosition);
@@ -158,24 +174,24 @@ public class SwerveModule {
   }
 
   public void telemetry() {
-    SmartDashboard.putNumber(m_moduleChannel + "Desired Velocity",
-        Math.abs(Units.metersToInches(m_desiredState.speedMetersPerSecond)));
-    SmartDashboard.putNumber(m_moduleChannel + "Velocity",
-        Math.abs(Units.metersToInches(m_drivingEncoder.getVelocity())));
-    SmartDashboard.putNumber(m_moduleChannel + "Drive Angle", m_turningEncoder.getPosition());
-    SmartDashboard.putNumber(m_moduleChannel + "Desired Drive Angle", m_desiredState.angle.getDegrees());
+    Telemetry.log(m_moduleChannel + "Desired Velocity",
+        Math.abs(Units.metersToInches(m_desiredState.velocity)));
+    Telemetry.log(m_moduleChannel + "Velocity",
+        Math.abs(Units.metersToInches(m_drivingEncoder.getVelocity().get())));
+    Telemetry.log(m_moduleChannel + "Drive Angle", m_turningEncoder.getPosition().get());
+    Telemetry.log(m_moduleChannel + "Desired Drive Angle", m_desiredState.angle.getDegrees());
 
   }
 
   /*
    * public void showPID(){
-   * SmartDashboard.putNumber(m_moduleChannel + "P",
+   * Telemetry.log(m_moduleChannel + "P",
    * m_drivingPIDController.getP());
-   * SmartDashboard.putNumber(m_moduleChannel + "I",
+   * Telemetry.log(m_moduleChannel + "I",
    * m_drivingPIDController.getI());
-   * SmartDashboard.putNumber(m_moduleChannel + "D",
+   * Telemetry.log(m_moduleChannel + "D",
    * m_drivingPIDController.getD());
-   * SmartDashboard.putNumber(m_moduleChannel + "FF",
+   * Telemetry.log(m_moduleChannel + "FF",
    * m_drivingPIDController.getFF());
    * }
    */
@@ -213,6 +229,6 @@ public class SwerveModule {
   }
 
   public double getVelocity() {
-    return m_drivingEncoder.getVelocity();
+    return m_drivingEncoder.getVelocity().get();
   }
 }
