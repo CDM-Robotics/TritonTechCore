@@ -6,9 +6,12 @@ plugins {
 
 group = 'org.tritontech'
 version = '2.0.0'
+// Compile with JDK 25 regardless of which JDK runs Gradle. The WPILib-bundled JDK is
+// registered as a toolchain candidate in gradle.properties; CI provides JDK 25 via setup-java.
 java {
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
 }
 
 def versionFile = layout.buildDirectory.file("resources/main/org/tritontech/core/version.properties").get().asFile
