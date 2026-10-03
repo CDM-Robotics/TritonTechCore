@@ -93,6 +93,7 @@ public class DriveTrain extends SubsystemBase {
     // SystemCore's built-in IMU (replaces the NavX, which needed the roboRIO MXP port)
     private final OnboardIMU m_gyro;
     private double m_angleOffset;
+    private boolean m_gyroInverted = false;
     private double engineerThrottle;
     private double driverThrottle;
 
@@ -365,7 +366,8 @@ public class DriveTrain extends SubsystemBase {
     public double getAngle() {
         // OnboardIMU yaw is CCW-positive (WPILib convention), unlike the NavX's CW-positive
         // getAngle(), so no negation is needed here.
-        return Math.toDegrees(MathUtil.angleModulus(m_gyro.getYawRadians()))
+        double yaw = m_gyroInverted ? -m_gyro.getYawRadians() : m_gyro.getYawRadians();
+        return Math.toDegrees(MathUtil.angleModulus(yaw))
                 + m_angleOffset;
     }
 
@@ -768,6 +770,15 @@ public class DriveTrain extends SubsystemBase {
         return ((resetPose && (resetCmd != null)) ? resetCmd.andThen(traj) : traj);
         
     //    return resetCmd;
+    }
+
+    /**
+     * Flips the sign of the SystemCore IMU yaw. getAngle() must increase when the robot turns
+     * counter-clockwise (seen from above); set this if it decreases instead, e.g. because the
+     * SystemCore is mounted upside down. Call before zeroing the heading or resetting odometry.
+     */
+    public void setGyroInverted(boolean inverted) {
+        m_gyroInverted = inverted;
     }
 
     public void setGyroBias(double b) {
