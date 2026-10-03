@@ -10,7 +10,7 @@ The last 2026/roboRIO version is commit `6d03359` (published locally as `1.0.32`
 
 ## Commands
 
-Use Git Bash (`./gradlew`) or `gradlew.bat` on Windows. The code compiles with a JDK 25 toolchain. Gradle itself can run on any JDK 17 or newer, and `gradle.properties` registers the WPILib-bundled JDK (`C:/Users/Public/wpilib/2027_alpha7/jdk`) as a toolchain, so `JAVA_HOME` doesn't need to be set. When the WPILib year changes, update that path. `settings.gradle` resolves GradleRIO from the local WPILib install's Maven repo first, then from the Gradle plugin portal, which is what CI uses.
+Use Git Bash (`./gradlew`) or `gradlew.bat` on Windows. **The wrapper scripts are customized** (look for the `TritonTechCore` comments) to always run Gradle on the WPILib-bundled JDK, `C:/Users/Public/wpilib/2027_alpha7/jdk`, whatever `JAVA_HOME` or `PATH` say. `gradlew` does this only when it detects Git Bash (MINGW in `/proc/version`), so CI on Linux is unaffected. This matters because Gradle 9 must be launched with Java 17 or newer, and student machines often have an older Java. If you regenerate or upgrade the wrapper, re-apply these edits. `gradle.properties` also registers that JDK as the Java 25 compile toolchain. When the WPILib year changes, update the path in `gradlew`, `gradlew.bat` and `gradle.properties`. `settings.gradle` resolves GradleRIO from the local WPILib install's Maven repo first, then from the Gradle plugin portal, which is what CI uses.
 
 ```bash
 ./gradlew clean build --refresh-dependencies   # full build + tests (also regenerates TritonTechCore.json)

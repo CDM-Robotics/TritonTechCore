@@ -116,6 +116,16 @@ esac
 
 
 
+# TritonTechCore mods
+# Check if /proc/version exists and contains MINGW (Git Bash): build with the WPILib-bundled JDK
+if [ -f /proc/version ] && grep -qi "MINGW" /proc/version; then
+    JAVA_HOME="/c/Users/Public/wpilib/2027_alpha7/jdk"
+    export JAVA_HOME
+    echo "Detected MinGW environment. JAVA_HOME set to $JAVA_HOME"
+else
+    echo "Not a MinGW environment or /proc/version not found. JAVA_HOME not modified."
+fi
+
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
     if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
