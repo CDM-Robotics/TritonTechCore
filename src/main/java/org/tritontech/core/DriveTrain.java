@@ -216,14 +216,18 @@ public class DriveTrain extends SubsystemBase {
         m_nearestTargetPose = null;
         isLiveUpdatedOdometry = false;
 
-        // TODO: If red-alliance auto behaves badly (robot drives to the wrong side of the
-        // field, etc.) and you can't reach support to debug it, flip this back to `false`.
-        // That was the prior known-working fallback (blue-only, unflipped trajectories).
+        // Alliance flipping is OFF on purpose. Without vision the robot only knows its pose
+        // relative to where each auto resets it, so running blue-built trajectories unflipped on
+        // red executes the same path rotated 180 degrees about field center -- which is the
+        // correct red path on a point-symmetric field (2026). Flipping would also put the gyro
+        // heading in absolute field coordinates (~180 deg on red), making field-relative teleop
+        // drive backwards for a red-side driver until the heading is re-zeroed.
+        // Turn it on only once vision (AprilTags) provides an absolute field pose.
         autoFactory = new AutoFactory(
             this::getPose, // A function that returns the current robot pose
             this::resetOdometry, // A function that resets the current robot pose to the provided Pose2d
             this::followTrajectory, // The drive subsystem trajectory follower
-            true, // If alliance flipping should be enabled
+            false, // If alliance flipping should be enabled
             this
         );
     }
