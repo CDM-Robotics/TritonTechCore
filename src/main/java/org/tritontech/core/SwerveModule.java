@@ -18,6 +18,7 @@ import com.revrobotics.spark.config.SparkBaseConfig;
 import org.wpilib.hardware.bus.CANPort;
 import org.wpilib.math.controller.SimpleMotorFeedforward;
 import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.math.util.MathUtil;
 import org.wpilib.math.kinematics.SwerveModulePosition;
 import org.wpilib.math.kinematics.SwerveModuleVelocity;
 import org.wpilib.math.util.Units;
@@ -46,12 +47,26 @@ public class SwerveModule {
   private double m_chassisAngularOffset = 0;
   private SwerveModuleVelocity m_desiredState = new SwerveModuleVelocity(0.0, new Rotation2d());
 
+  // REVLib 2027 removed encoder conversion factors: encoders always report native units
+  // (rotations, RPM) and closed-loop setpoints are in those same units. This class converts at
+  // the boundary so everything outside it stays in meters, m/s and radians.
+  private final double m_drivingMetersPerRotation;
+  private static final double kTurningRadiansPerRotation = 2 * Math.PI;
+
 
   /**
    * Constructs a MAXSwerveModule and configures the driving and turning motor,
    * encoder, and PID controller. This configuration is specific to the REV
    * MAXSwerve Module built with NEOs, SPARKS MAX, and a Through Bore
    * Encoder.
+   *
+   * <p>{@code drivingConfig} and {@code turningConfig} must not rely on encoder conversion factors
+   * (REVLib 2027 no longer has them), and their closed-loop gains act on native units: RPM for the
+   * driving motor and rotations of the turning absolute encoder.
+   *
+   * @param drivingFeedForward feedforward in volts for a wheel speed in meters per second
+   * @param drivingMetersPerRotation wheel travel in meters per driving motor rotation
+   *     (wheel circumference / driving motor reduction)
    */
   public SwerveModule(CANPort canBus,
       int drivingCANId,
@@ -62,7 +77,8 @@ public class SwerveModule {
       String p_moduleChannel,
       SparkBaseConfig drivingConfig,
       SparkBaseConfig turningConfig,
-      SimpleMotorFeedforward drivingFeedForward) {
+      SimpleMotorFeedforward drivingFeedForward,
+      double drivingMetersPerRotation) {
     m_drivingSpark = MotorFactory.createMotor(drivingSparkType, canBus, drivingCANId, MotorType.kBrushless);
     m_turningSpark = MotorFactory.createMotor(turningSparkType, canBus, turningCANId, MotorType.kBrushless);
 
@@ -79,8 +95,9 @@ public class SwerveModule {
     m_turningSpark.configure(turningConfig, ResetMode.kResetSafeParameters,
         PersistMode.kPersistParameters);
 
+    m_drivingMetersPerRotation = drivingMetersPerRotation;
     m_chassisAngularOffset = chassisAngularOffset;
-    m_desiredState.angle = new Rotation2d(m_turningEncoder.getPosition().get());
+    m_desiredState.angle = new Rotation2d(getTurningRadians());
     m_drivingEncoder.setPosition(0);
 
     m_moduleChannel = p_moduleChannel;
@@ -97,9 +114,11 @@ public class SwerveModule {
       String p_moduleChannel,
       SparkBaseConfig drivingConfig,
       SparkBaseConfig turningConfig,
-      SimpleMotorFeedforward drivingFeedForward) {
+      SimpleMotorFeedforward drivingFeedForward,
+      double drivingMetersPerRotation) {
     this(MotorFactory.DEFAULT_CAN_BUS, drivingCANId, drivingSparkType, turningSparkType, turningCANId,
-        chassisAngularOffset, p_moduleChannel, drivingConfig, turningConfig, drivingFeedForward);
+        chassisAngularOffset, p_moduleChannel, drivingConfig, turningConfig, drivingFeedForward,
+        drivingMetersPerRotation);
   }
 
   @Deprecated
@@ -110,11 +129,22 @@ public class SwerveModule {
       String p_moduleChannel,
       SparkBaseConfig drivingConfig,
       SparkBaseConfig turningConfig,
-      SimpleMotorFeedforward drivingFeedForward) {
+      SimpleMotorFeedforward drivingFeedForward,
+      double drivingMetersPerRotation) {
 
         this(drivingCANId, drivingSparkType, MotorControllerType.SPARK_MAX, turningCANId, chassisAngularOffset, p_moduleChannel,
-        drivingConfig, turningConfig, drivingFeedForward);
+        drivingConfig, turningConfig, drivingFeedForward, drivingMetersPerRotation);
       }
+
+  /** Turning absolute encoder angle in radians, before the chassis angular offset. */
+  private double getTurningRadians() {
+    return m_turningEncoder.getPosition().get() * kTurningRadiansPerRotation;
+  }
+
+  /** Driving wheel speed in meters per second. */
+  private double getDrivingVelocityMps() {
+    return m_drivingEncoder.getVelocity().get() * m_drivingMetersPerRotation / 60.0;
+  }
 
   /**
    * Returns the current state of the module.
@@ -124,8 +154,8 @@ public class SwerveModule {
   public SwerveModuleVelocity getState() {
     // Apply chassis angular offset to the encoder position to get the position
     // relative to the chassis.
-    return new SwerveModuleVelocity(m_drivingEncoder.getVelocity().get(),
-        new Rotation2d(m_turningEncoder.getPosition().get() - m_chassisAngularOffset));
+    return new SwerveModuleVelocity(getDrivingVelocityMps(),
+        new Rotation2d(getTurningRadians() - m_chassisAngularOffset));
   }
 
   /**
@@ -137,8 +167,8 @@ public class SwerveModule {
     // Apply chassis angular offset to the encoder position to get the position
     // relative to the chassis.
     return new SwerveModulePosition(
-        m_drivingEncoder.getPosition().get(),
-        new Rotation2d(m_turningEncoder.getPosition().get() - m_chassisAngularOffset));
+        m_drivingEncoder.getPosition().get() * m_drivingMetersPerRotation,
+        new Rotation2d(getTurningRadians() - m_chassisAngularOffset));
   }
 
   /**
@@ -153,7 +183,7 @@ public class SwerveModule {
     SwerveModuleVelocity correctedDesiredState = new SwerveModuleVelocity(
         desiredState.velocity,
         desiredState.angle.plus(Rotation2d.fromRadians(m_chassisAngularOffset)))
-        .optimize(new Rotation2d(m_turningEncoder.getPosition().get()));
+        .optimize(new Rotation2d(getTurningRadians()));
 
     // double AccelerationThingy = (optimizedDesiredState.speedMetersPerSecond -
     // m_previousVelocity)* ModuleConstants.kPAcceleration;
@@ -163,11 +193,16 @@ public class SwerveModule {
     // + AccelerationThingy), CANSparkMax.ControlType.kVelocity);
     // m_turningPIDController.setReference(optimizedDesiredState.angle.getRadians(),
     // CANSparkMax.ControlType.kPosition);
-    m_drivingClosedLoopController.setSetpoint((correctedDesiredState.velocity),
+    // Setpoints are in native units: RPM for driving, rotations [0, 1) for turning (the robot
+    // config enables position PID wrapping so 0.99 -> 0.01 takes the short way round).
+    m_drivingClosedLoopController.setSetpoint(
+        correctedDesiredState.velocity / m_drivingMetersPerRotation * 60.0,
         SparkMax.ControlType.kVelocity, ClosedLoopSlot.kSlot0,
         m_drivingFeedForward.calculate(correctedDesiredState.velocity));
-    
-    m_turningClosedLoopController.setSetpoint(correctedDesiredState.angle.getRadians(),
+
+    m_turningClosedLoopController.setSetpoint(
+        MathUtil.inputModulus(correctedDesiredState.angle.getRadians(), 0, kTurningRadiansPerRotation)
+            / kTurningRadiansPerRotation,
         SparkMax.ControlType.kPosition);
 
     m_desiredState = desiredState;
@@ -177,8 +212,8 @@ public class SwerveModule {
     Telemetry.log(m_moduleChannel + "Desired Velocity",
         Math.abs(Units.metersToInches(m_desiredState.velocity)));
     Telemetry.log(m_moduleChannel + "Velocity",
-        Math.abs(Units.metersToInches(m_drivingEncoder.getVelocity().get())));
-    Telemetry.log(m_moduleChannel + "Drive Angle", m_turningEncoder.getPosition().get());
+        Math.abs(Units.metersToInches(getDrivingVelocityMps())));
+    Telemetry.log(m_moduleChannel + "Drive Angle", getTurningRadians());
     Telemetry.log(m_moduleChannel + "Desired Drive Angle", m_desiredState.angle.getDegrees());
 
   }
@@ -228,7 +263,8 @@ public class SwerveModule {
     m_drivingEncoder.setPosition(0);
   }
 
+  /** Driving wheel speed in meters per second. */
   public double getVelocity() {
-    return m_drivingEncoder.getVelocity().get();
+    return getDrivingVelocityMps();
   }
 }
